@@ -55,3 +55,34 @@ export const asciiMenu = `
 ║ Enter 1-15 to select algorithm • q to quit   ║
 ╚═══════════════════════════════════════════════╝
 `;
+
+
+export const mainMenuASCII = `
+┌───────────────────────────────────────────────┐
+│                   MAIN MENU                   │
+└───────────────────────────────────────────────┘
+
+    ┌─  HASHING   ─────────────────────────────┐
+    │  1. Hash Text                            │
+    │     • Generate hashes from any text      │
+    │     • Support for 15+ algorithms         │
+    │     • Fast batch processing              │
+    └──────────────────────────────────────────┘
+
+    ┌─  CRACKING   ────────────────────────────┐
+    │  2. Dictionary Attack                    │
+    │     • Crack hashes using wordlists       │
+    │     • Optimized for performance          │
+    │     • RockYou.txt compatible             │
+    └──────────────────────────────────────────┘
+
+    ┌─  EXIT   ────────────────────────────────┐
+    │  3. Exit Program                         │
+    │     • Close Brutal Hash                  │
+    │     • Return to terminal                 │
+    └──────────────────────────────────────────┘
+
+╔═══════════════════════════════════════════════╗
+║  Enter 1-3 to select • Ctrl+C to brute Exit   ║
+╚═══════════════════════════════════════════════╝
+`;
