@@ -1,6 +1,6 @@
 import fs from 'fs'
 import {asciiArt, asciiMenu, mainMenuASCII} from './asciiStorage.js'
-import crypto, { hash } from 'crypto';
+import crypto from 'crypto';
 import readline from 'readline';
 
 // Functions:
@@ -18,7 +18,7 @@ function input(question) {
 
 function generateHash(text,type) {
     return crypto.createHash(type).update(text).digest('hex');
-    // TO-D0 Will soon implement random hash with it's clear-text result.
+    // TO-DO Will soon implement random hash with its clear-text result.
 }
 
 async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm) {
@@ -37,7 +37,7 @@ async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm) {
         if (testHash === targetHash) {
             const endTime = Date.now() - startTime;
             console.log(`\nDictionary attack finished.\n`)
-            console.log(`\nStatus: FOUND\nPassword: ${currentWord}\nAttempts: ${attempts}\nTime: ${endTime}`);
+            console.log(`\nStatus: FOUND\nPassword: ${currentWord}\nAttempts: ${attempts}\nTime: ${endTime}ms`);
             return currentWord;
         }
 
@@ -65,23 +65,29 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
     let endTime = null;
 
     for await (const line of rl) {
-        attempts++;
-        const currentWord = line.trim();
-        if (!currentWord) continue;
+        // A line may contain multiple words separated by whitespace.
+        // Split the line into tokens and test each token separately.
+        const tokens = line.split(/\s+/);
+        for (const token of tokens) {
+            const currentWord = token.trim();
+            if (!currentWord) continue;
 
-        const testHash = generateHash(currentWord, hashAlgorithm);
+            attempts++;
+            const testHash = generateHash(currentWord, hashAlgorithm);
 
-        if (testHash === targetHash) {
-            found = currentWord;
-            break;
+            if (testHash === targetHash) {
+                found = currentWord;
+                break;
+            }
         }
+        if (found) break;
     }
 
     endTime = Date.now() - startTime;
     rl.close();
     console.log(`\nDictionary attack finished.\n`);
     if (found === null) console.log(`\nStatus: NOT FOUND\nPassword: Unknown \nAttempts: ${attempts}\nTime: ${endTime}ms`);
-    else console.log(`\nStatus: FOUND\nPassword: ${found}\nAttempts: ${attempts}\nTime: ${endTime}`);
+    else console.log(`\nStatus: FOUND\nPassword: ${found}\nAttempts: ${attempts}\nTime: ${endTime}ms`);
     return found;
 }
 
@@ -91,7 +97,7 @@ async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm) {
     console.log('='.repeat(50));
 
     if (typeof wordListSource === 'string') {
-        // Steam attack, resource saving
+        // Stream attack, resource saving
         return await dictionaryAttackStream(targetHash, wordListSource, hashAlgorithm);
     } else {
         // Memory attack, easy on resource
@@ -104,7 +110,7 @@ async function hashMenu(restart=false) {
 
     async function restartHashMenu() {
     const restartQ = await input(`\n'b' - return to Hash Menu , 'q' - return to Main Menu : \n`)
-    if (restartQ.toLowerCase() != 'b' && restartQ != 'q') {
+    if (restartQ.toLowerCase() != 'b' && restartQ.toLowerCase() != 'q') {
         console.log('ERROR: Enter valid choice.');
         await restartHashMenu();
     } else if (restartQ.toLowerCase() === 'q') {
@@ -116,7 +122,7 @@ async function hashMenu(restart=false) {
     const dictHashes = {
     1:'md5',
     2:'sha1',
-    3:'sha1',
+    3:'sha256',
     4:'sha224',
     5:'sha256',
     6:'sha384',
@@ -142,10 +148,10 @@ async function hashMenu(restart=false) {
     const choiceNum = Number(algChoice);
     if (isNaN(choiceNum)) {
         console.log('\nERROR: Number must be entered.');
-        await hashMenu(restart=true);
+        await hashMenu(true);
     } else if (choiceNum < 1 || choiceNum > 15) {
         console.log('\nERROR: Number between 1-15 must be entered.');
-        await hashMenu(restart=true);
+        await hashMenu(true);
     }
     const type = dictHashes[algChoice];
 
@@ -165,10 +171,10 @@ async function mainMenu(restart=false) {
     let choiceNum = await input('\nEnter number: \n');
     if (isNaN(choiceNum)) {
         console.log('\nERROR: Number must be entered.\n');
-        await mainMenu(restart=true);
+        await mainMenu(true);
     } else if (choiceNum < 1 || choiceNum > 3) {
         console.log('\nERROR: Number between 1-3 must be entered.\n');
-        await mainMenu(restart=true);
+        await mainMenu(true);
     }
     choiceNum = Number(choiceNum);
     if (choiceNum === 1) {
@@ -177,18 +183,20 @@ async function mainMenu(restart=false) {
         // TO-DO napravi Cracking Menu
     } else {
         console.log('\nINFO: Exiting the program.\n');
-        process.exit(0);
+        //process.exit(0); // TODO - Until the menu is added, stays like this.
     }
 }
 
-// Main
+// Showcase of Main:
 await mainMenu();
 
 // Dictionary test:
-// Soon updated with it's own Menu
+// Soon updated with own Menu
+console.log('\nStarting Dictionary test showcase...\n')
+const wordToTest = 'randomWordHere';
+const targetHash = crypto.createHash('md5').update(wordToTest).digest('hex');
+console.log(`Hash to test: ${targetHash}, Word in clear-text: ${wordToTest}\n\n`);
+const wordListSource = './BrutalHashJS/Wordlists/dictionaryTest.txt';
+const hashAlgorithm = 'md5';
 
-// const targetHash = '4d5257e5acc7fcac2f5dcd66c4e78f9a'
-// const wordListSource = './BrutalHashJS/rockyou.txt'
-// const hashAlgorithm = 'md5'
-
-// const result = await dictionaryAttack(targetHash,wordListSource,hashAlgorithm);
+await dictionaryAttack(targetHash,wordListSource,hashAlgorithm);
