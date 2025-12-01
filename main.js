@@ -1,7 +1,31 @@
 import fs from 'fs'
-import {asciiArt, asciiMenu, mainMenuASCII} from './asciiStorage.js'
+import path from 'path'
+import {asciiArt, 
+        asciiMenu, 
+        mainMenuASCII, 
+        crackingMenuASCII, 
+        dictionaryListMenuASCIIHead,
+        dictionaryListMenuASCIITail,
+        dictionaryListMenuASCIIEnd,
+        dictionaryListMenuASCIITitle,
+        dictionaryCustomTitle,
+        dictionaryCustomName,
+        statusDictionary,
+        dictionaryAttackMethodMenuASCII} from './asciiStorage.js'
 import crypto from 'crypto';
 import readline from 'readline';
+
+import { fileURLToPath } from 'url';
+
+// Resolve __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function getDictFolder() {
+    const preferred = path.join(__dirname, 'Wordlists');
+    if (fs.existsSync(preferred) && fs.statSync(preferred).isDirectory()) return preferred;
+    return preferred; // default to preferred path
+}
 
 // Functions:
 
@@ -65,8 +89,8 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
     let endTime = null;
 
     for await (const line of rl) {
-        // A line may contain multiple words separated by whitespace.
-        // Split the line into tokens and test each token separately.
+        // A line can contain multiple words separated by whitespaces
+        // Spliting the lines into tokens and testing each token separately
         const tokens = line.split(/\s+/);
         for (const token of tokens) {
             const currentWord = token.trim();
@@ -105,6 +129,158 @@ async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm) {
     }
 
 }
+
+async function loadDictionaryList() {
+    const folderPath = getDictFolder();
+    try {
+        const files = await fs.promises.readdir(folderPath);
+        const result = [];
+        for (const f of files) {
+            const full = path.join(folderPath, f);
+            try {
+                const stat = await fs.promises.stat(full);
+                if (stat.isFile()) {
+                    result.push({ name: f, path: full, size: stat.size });
+                }
+            } catch (e) {
+                // ignore 
+            }
+        }
+        return result;
+    } catch (err) {
+        console.error('Error reading Wordlists folder:', err.message);
+        return [];
+    }
+}
+
+async function displayList() {
+    const oldResult = await loadDictionaryList();
+    let newResult = [];
+    for (let i = 0; i < oldResult.length; i++) {
+        const newElement = `${i + 1}.  File: ${oldResult[i].name}  Path: ${oldResult[i].path}  Size: ${oldResult[i].size}`
+        newResult.push(newElement);
+    }
+    console.log(dictionaryListMenuASCIITitle);
+    console.log(dictionaryListMenuASCIIHead);
+    for (let i = 0; i < newResult.length; i++) {
+        console.log(newResult[i]);
+    }
+    console.log(dictionaryListMenuASCIITail);
+    console.log(dictionaryListMenuASCIIEnd);
+}
+
+async function selectDictionaryMenu(restart=false) {
+    if (restart === false) {
+        await displayList();
+    }
+    const dictionaryList = await loadDictionaryList();
+    const listLength = dictionaryList.length;
+    const userInputRaw = (await input('\nEnter number: \n')).trim();
+
+    if (userInputRaw.toLowerCase() === 'b') {
+        await crackingMenu();
+        return null;
+    }
+
+    const choiceNum = Number(userInputRaw);
+    if (isNaN(choiceNum)) {
+        console.log('\nERROR: Number must be entered.\n');
+        return await selectDictionaryMenu(true);
+    }
+
+    if (choiceNum < 1 || choiceNum > listLength) {
+        console.log('\nERROR: Number must be entered in given range.\n');
+        return await selectDictionaryMenu(true);
+    }
+
+    const idx = choiceNum - 1;
+    const setFilePath = dictionaryList[idx].path;
+    console.log(`\nINFO: '${dictionaryList[idx].name}' set as active file.\n`);
+    return setFilePath;
+} 
+
+async function selectCustomDictionaryMenu() {
+    // Create a new custom dictionary file with user-provided words
+    const listOfWords = [];
+
+    console.log(dictionaryCustomName);
+    let userInput = (await input('\nEnter file name (without extension): \n')).trim();
+    if (!userInput) {
+        console.log('\nERROR: File name cannot be empty.');
+        return await selectCustomDictionaryMenu();
+    }
+    // sanitize filename (basic)
+    userInput = userInput.replace(/[^a-zA-Z0-9_\-]/g, '_') + '.txt';
+
+    console.log(dictionaryCustomTitle);
+    const userInput2 = (await input('\nHow many words to add: \n')).trim();
+    if (isNaN(userInput2)) {
+        console.log('\nERROR: Number must be entered.\n');
+        return await selectCustomDictionaryMenu();
+    }
+    const numberOfWords = Number(userInput2);
+    if (numberOfWords < 1) {
+        console.log('\nERROR: Invalid range.\n');
+        return await selectCustomDictionaryMenu();
+    }
+
+    for (let i = 0; i < numberOfWords; i++) {
+        const word = (await input(`\nEnter word ${i + 1} of ${numberOfWords}:\n`)).trim();
+        if (!word) {
+            console.log('Skipping empty word.');
+            continue;
+        }
+        listOfWords.push(word);
+    }
+
+    const dictDir = getDictFolder();
+    try {
+        await fs.promises.mkdir(dictDir, { recursive: true });
+    } catch (e) {
+        // ignore
+    }
+
+    const newPath = path.join(dictDir, userInput);
+    try {
+        await fs.promises.writeFile(newPath, listOfWords.join('\n') + '\n', 'utf8');
+        console.log(`INFO: File successfully written to ${newPath}`);
+        return newPath;
+    } catch (err) {
+        console.error('Error writing file:', err.message);
+        return null;
+    }
+}
+
+async function selectAttackMethodMenu(restart=false) {
+    if (restart ===  false) {
+        console.log(dictionaryAttackMethodMenuASCII);
+    }
+    const userInputRaw = (await input('\nEnter number: \n')).trim();
+
+    if (userInputRaw.toLowerCase() === 'b') {
+        await crackingMenu();
+        return undefined;
+    }
+
+    const choiceNum = Number(userInputRaw);
+
+    if (isNaN(choiceNum)) {
+        console.log('\nERROR: Number must be entered.\n');
+        return await selectAttackMethodMenu(true);
+    }
+
+    if (choiceNum < 1 || choiceNum > 2) {
+        console.log('\nERROR: Number must be entered in given range.\n');
+        return await selectAttackMethodMenu(true);
+    }
+
+    if (choiceNum === 1) {
+        return 'Dictionary_Attack';
+    } else if (choiceNum === 2) {
+        return 'Stream_Attack';
+    };
+}
+
 
 async function hashMenu(restart=false) {
 
@@ -164,6 +340,50 @@ async function hashMenu(restart=false) {
     await restartHashMenu();
 }
 
+async function crackingMenu(restart=false,activeFilePath,activeAttackMethod) {
+    if (restart === false) {
+        console.log(crackingMenuASCII);
+    }
+    let choiceNum = await input('\nEnter number: \n');
+    if (choiceNum === 'b' || choiceNum === 'B') {
+        await mainMenu();
+    } else if (isNaN(choiceNum)) {
+        console.log('\nERROR: Number must be entered.\n');
+        await crackingMenu(true);
+    } else if (choiceNum < 1 || choiceNum > 5) {
+        console.log('\nERROR: Number between 1-5 must be entered.\n');
+        await crackingMenu(true);
+    }
+
+    choiceNum = Number(choiceNum);
+
+    if (choiceNum === 1) {
+        activeFilePath = await selectDictionaryMenu();
+        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod);
+    } else if (choiceNum === 2) {
+        await selectCustomDictionaryMenu();
+    } else if (choiceNum === 3) {
+        activeAttackMethod = await selectAttackMethodMenu();
+        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod);
+    } else if (choiceNum === 4) {
+        console.log(statusDictionary);
+        console.log(`- Wordlist: ${activeFilePath}`)
+        if (activeAttackMethod === 'Dictionary_Attack') {
+            console.log(`- Attack Method: ${activeAttackMethod} (WARNING: NOT SUGGESTED FOR PC WITH LOW RAM!)`)
+        } else {
+            console.log(`- Attack Method: ${activeAttackMethod}`)
+        }
+        console.log(dictionaryListMenuASCIITail);
+        crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod);
+    } else if (choiceNum === 5) {
+        console.log('Not yet.')
+        // TO-DO napravi start the attack uz dictionaryAttack()
+    } else {
+        console.log('\nINFO: Exiting the program.\n');
+        //process.exit(0); // TODO - Until the menu is added, stays like this.
+    }
+}
+
 async function mainMenu(restart=false) {
     if (restart === false) {
         console.log(mainMenuASCII);
@@ -180,23 +400,24 @@ async function mainMenu(restart=false) {
     if (choiceNum === 1) {
         await hashMenu();
     } else if (choiceNum === 2) {
-        // TO-DO napravi Cracking Menu
+        await crackingMenu();
     } else {
         console.log('\nINFO: Exiting the program.\n');
         //process.exit(0); // TODO - Until the menu is added, stays like this.
     }
 }
 
-// Showcase of Main:
+// // Showcase of Main:
+console.log(asciiArt);
 await mainMenu();
 
-// Dictionary test:
-// Soon updated with own Menu
-console.log('\nStarting Dictionary test showcase...\n')
-const wordToTest = 'randomWordHere';
-const targetHash = crypto.createHash('md5').update(wordToTest).digest('hex');
-console.log(`Hash to test: ${targetHash}, Word in clear-text: ${wordToTest}\n\n`);
-const wordListSource = './BrutalHashJS/Wordlists/dictionaryTest.txt';
-const hashAlgorithm = 'md5';
+// // Dictionary test:
+// // Soon updated with own Menu
+// console.log('\nStarting Dictionary test showcase...\n')
+// const wordToTest = 'randomWordHere';
+// const targetHash = crypto.createHash('md5').update(wordToTest).digest('hex');
+// console.log(`Hash to test: ${targetHash}, Word in clear-text: ${wordToTest}\n\n`);
+// const wordListSource = './BrutalHashJS/Wordlists/dictionaryTest.txt';
+// const hashAlgorithm = 'md5';
 
-await dictionaryAttack(targetHash,wordListSource,hashAlgorithm);
+// await dictionaryAttack(targetHash,wordListSource,hashAlgorithm);
