@@ -1,4 +1,4 @@
-export const asciiArt = `
+export const asciiArt = `\n
  ╱$$$$$$$                        ╱$$               ╱$$ ╱$$   ╱$$                     ╱$$          ╱$$$$$  ╱$$$$$$ 
 │ $$__  $$                      │ $$              │ $$│ $$  │ $$                    │ $$         │__  $$ ╱$$__  $$
 │ $$  ╲ $$  ╱$$$$$$  ╱$$   ╱$$ ╱$$$$$$    ╱$$$$$$ │ $$│ $$  │ $$  ╱$$$$$$   ╱$$$$$$$│ $$$$$$$       │ $$│ $$  ╲__╱
@@ -7,7 +7,7 @@ export const asciiArt = `
 │ $$  ╲ $$│ $$      │ $$  │ $$  │ $$ ╱$$ ╱$$__  $$│ $$│ $$  │ $$ ╱$$__  $$ ╲____  $$│ $$  │ $$│ $$  │ $$ ╱$$  ╲ $$
 │ $$$$$$$╱│ $$      │  $$$$$$╱  │  $$$$╱│  $$$$$$$│ $$│ $$  │ $$│  $$$$$$$ ╱$$$$$$$╱│ $$  │ $$│  $$$$$$╱│  $$$$$$╱
 │_______╱ │__╱       ╲______╱    ╲___╱   ╲_______╱│__╱│__╱  │__╱ ╲_______╱│_______╱ │__╱  │__╱ ╲______╱  ╲______╱ 
-`;
+\n`;
 
 
 export const asciiMenu = `
@@ -56,6 +56,24 @@ export const asciiMenu = `
 ╚═══════════════════════════════════════════════╝
 `;
 
+export const crackingMenuASCII = `
+╔═══════════════════════════════════════════════╗
+║                 CRACKING MENU                 ║
+╚═══════════════════════════════════════════════╝
+
+┌─ OPTIONS ─────────────────────────────────────┐
+│ 1. Select Wordlist         - Equip from list  │
+│ 2. Make Custom Wordlist    - Create your own  │
+│ 3. Select Attack Method    - Start cracking   │
+│ 4. Show Status             - See equiped stats│
+│ 5. Start Attack            - Start cracking   │
+└───────────────────────────────────────────────┘
+
+╔═══════════════════════════════════════════════╗
+║     Enter 1-5 to select option • b to back    ║
+╚═══════════════════════════════════════════════╝
+`
+
 
 export const mainMenuASCII = `
 ┌───────────────────────────────────────────────┐
@@ -86,3 +104,58 @@ export const mainMenuASCII = `
 ║  Enter 1-3 to select • Ctrl+C to brute Exit   ║
 ╚═══════════════════════════════════════════════╝
 `;
+
+export const dictionaryListMenuASCIITitle = `
+╔═══════════════════════════════════════════════╗
+║               DICTIONARY LIST MENU            ║
+╚═══════════════════════════════════════════════╝
+`
+export const dictionaryListMenuASCIIHead = `
+─ AVAILABLE DICTIONARIES ────────────────────────
+`
+
+export const dictionaryListMenuASCIITail = `
+─────────────────────────────────────────────────
+`
+
+export const dictionaryListMenuASCIIEnd = `
+╔════════════════════════════════════════════════╗
+║ Enter number to select dictionary • b to back  ║
+╚════════════════════════════════════════════════╝
+`
+export const dictionaryCustomTitle = `
+╔════════════════════════════════════════════════════╗
+║ Enter number of words you will use in custom list  ║
+║         • s to stop making custom list             ║
+╚════════════════════════════════════════════════════╝
+`
+
+export const dictionaryCustomName = `
+╔════════════════════════════════════════════════════╗
+║       Enter the name of this new dictionary        ║
+║         • s to stop making custom list             ║
+╚════════════════════════════════════════════════════╝
+`
+
+export const statusDictionary = `
+╔═══════════════════════════════════════════════╗
+║                    STATUS                     ║
+╚═══════════════════════════════════════════════╝
+`
+
+export const dictionaryAttackMethodMenuASCII = `
+╔═══════════════════════════════════════════════╗
+║            SELECT ATTACK METHOD               ║
+╚═══════════════════════════════════════════════╝
+
+┌─ METHODS ─────────────────────────────────────┐
+│ 1. Dictionary Attack (In-Memory)              │
+│      • Loads full wordlist into RAM           │
+│ 2. Stream Attack (On-Disk)                    │
+│      • Reads wordlist line-by-line            │
+└───────────────────────────────────────────────┘
+
+╔═══════════════════════════════════════════════╗
+║     Enter 1-2 to select method • b to back    ║
+╚═══════════════════════════════════════════════╝
+`
