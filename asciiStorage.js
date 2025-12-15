@@ -64,13 +64,15 @@ export const crackingMenuASCII = `
 ┌─ OPTIONS ─────────────────────────────────────┐
 │ 1. Select Wordlist         - Equip from list  │
 │ 2. Make Custom Wordlist    - Create your own  │
-│ 3. Select Attack Method    - Start cracking   │
-│ 4. Show Status             - See equiped stats│
-│ 5. Start Attack            - Start cracking   │
+│ 3. Select Attack Method    - Pick best suited │
+| 4. Enter Hash to crack     - Input hash       |
+| 5. Select type of hash     - Info about type  |
+│ 6. Show Status             - See equiped stats│
+│ 7. Start Attack            - Start cracking   │
 └───────────────────────────────────────────────┘
 
 ╔═══════════════════════════════════════════════╗
-║     Enter 1-5 to select option • b to back    ║
+║     Enter 1-7 to select option • b to back    ║
 ╚═══════════════════════════════════════════════╝
 `
 
