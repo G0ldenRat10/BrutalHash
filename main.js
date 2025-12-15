@@ -115,17 +115,25 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
     return found;
 }
 
-async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm) {
+async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attackMethod) {
 
     console.log('Brutal Hash - Dictionary Attack');
     console.log('='.repeat(50));
 
-    if (typeof wordListSource === 'string') {
-        // Stream attack, resource saving
-        return await dictionaryAttackStream(targetHash, wordListSource, hashAlgorithm);
-    } else {
-        // Memory attack, easy on resource
+    // Logic to not damage PC in case attackMethod is undefined:
+    if (attackMethod === undefined) {
+        if (typeof wordListSource === 'string') {
+            // Stream attack, resource saving
+            return await dictionaryAttackStream(targetHash, wordListSource, hashAlgorithm);
+        } else {
+            // Memory attack, easy on resource
+            return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm);
+        }
+    // If attackMethod is picked:
+    } else if (attackMethod === 'Dictionary_Attack') {
         return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm);
+    } else if (attackMethod === 'Stream_Attack') {
+        return dictionaryAttackStream(targetHash,wordListSource,hashAlgorithm);
     }
 
 }
@@ -340,7 +348,28 @@ async function hashMenu(restart=false) {
     await restartHashMenu();
 }
 
-async function crackingMenu(restart=false,activeFilePath,activeAttackMethod) {
+function pickAlgorithmMenu(n) {
+    const dictHashes = {
+        '1':'md5',
+        '2':'sha1',
+        '3':'sha256',
+        '4':'sha224',
+        '5':'sha256',
+        '6':'sha384',
+        '7':'sha512',
+        '8':'sha3-224',
+        '9':'sha3-256',
+        '10':'sha3-384',
+        '11':'sha3-512',
+        '12':'blake2s256',
+        '13':'blake2b512',
+        '14':'ripemd160',
+        '15':'whirlpool',
+    };
+    return dictHashes[n];
+}
+
+async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm) {
     if (restart === false) {
         console.log(crackingMenuASCII);
     }
@@ -350,8 +379,8 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod) {
     } else if (isNaN(choiceNum)) {
         console.log('\nERROR: Number must be entered.\n');
         await crackingMenu(true);
-    } else if (choiceNum < 1 || choiceNum > 5) {
-        console.log('\nERROR: Number between 1-5 must be entered.\n');
+    } else if (choiceNum < 1 || choiceNum > 7) {
+        console.log('\nERROR: Number between 1-7 must be entered.\n');
         await crackingMenu(true);
     }
 
@@ -359,25 +388,82 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod) {
 
     if (choiceNum === 1) {
         activeFilePath = await selectDictionaryMenu();
-        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod);
+        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
     } else if (choiceNum === 2) {
         await selectCustomDictionaryMenu();
     } else if (choiceNum === 3) {
         activeAttackMethod = await selectAttackMethodMenu();
-        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod);
+        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
     } else if (choiceNum === 4) {
-        console.log(statusDictionary);
-        console.log(`- Wordlist: ${activeFilePath}`)
-        if (activeAttackMethod === 'Dictionary_Attack') {
-            console.log(`- Attack Method: ${activeAttackMethod} (WARNING: NOT SUGGESTED FOR PC WITH LOW RAM!)`)
+        activeHashToCrack = await input('\nEnter hash to crack: \n');
+        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+    } else if (choiceNum === 5) {
+        console.log(asciiMenu);
+        let inputNumber = await input('\nEnter number: \n');
+        inputNumber = inputNumber.trim();
+        if (isNaN(inputNumber) || inputNumber < 1 || inputNumber > 15) {
+            console.log('\nERROR: Number between 1-15 must be entered.\n');
         } else {
-            console.log(`- Attack Method: ${activeAttackMethod}`)
+            activeHashAlgorithm = pickAlgorithmMenu(inputNumber);
+            console.log(`\nINFO: '${activeHashAlgorithm}' set as active hash algorithm.\n`);
+        }
+        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+    } else if (choiceNum === 6) {
+        console.log(statusDictionary);
+        console.log(`- Hash to dehash: ${activeHashToCrack}`);
+        console.log(`- Hash type: ${activeHashAlgorithm}`);
+        console.log(`- Wordlist: ${activeFilePath}`);
+        if (activeAttackMethod === 'Dictionary_Attack') {
+            console.log(`- Attack Method: ${activeAttackMethod} (WARNING: NOT SUGGESTED FOR PC WITH LOW RAM!)`);
+        } else {
+            console.log(`- Attack Method: ${activeAttackMethod}`);
         }
         console.log(dictionaryListMenuASCIITail);
-        crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod);
-    } else if (choiceNum === 5) {
-        console.log('Not yet.')
-        // TO-DO napravi start the attack uz dictionaryAttack()
+        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+    } else if (choiceNum === 7) {
+        // Validacija da su svi podaci uneti
+        if (!activeFilePath) {
+            console.log('\nERROR: Please select a wordlist first (Option 1).\n');
+            await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
+            return;
+        }
+        if (!activeAttackMethod) {
+            console.log('\nERROR: Please select attack method first (Option 3).\n');
+            await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
+            return;
+        }
+        if (!activeHashToCrack) {
+            console.log('\nERROR: Please enter target hash first (Option 4).\n');
+            await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
+            return;
+        }
+        if (!activeHashAlgorithm) {
+            console.log('\nERROR: Please select hash algorithm first (Option 5).\n');
+            await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
+            return;
+        }
+        
+        console.log('\n='.repeat(50));
+        console.log('STATUS: Attack started');
+        console.log('='.repeat(50));
+        console.log('\n');
+        
+        let wordListSource;
+
+        if (activeAttackMethod === 'Dictionary_Attack') {
+            // Dictionary_Attack
+            console.log('\nLoading wordlist into memory...\n');
+            const content = await fs.promises.readFile(activeFilePath, 'utf8');
+            wordListSource = content.split('\n');
+        } else {
+            // Stream_Attack 
+            wordListSource = activeFilePath;
+        }
+        
+        await dictionaryAttack(activeHashToCrack, wordListSource, activeHashAlgorithm);
+        
+        const continueChoice = await input('\nPress Enter to return to cracking menu...');
+        await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
     } else {
         console.log('\nINFO: Exiting the program.\n');
         //process.exit(0); // TODO - Until the menu is added, stays like this.
@@ -407,7 +493,7 @@ async function mainMenu(restart=false) {
     }
 }
 
-// // Showcase of Main:
+// Main
 console.log(asciiArt);
 await mainMenu();
 
