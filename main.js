@@ -1,3 +1,5 @@
+// Imports:
+
 import fs from 'fs'
 import path from 'path'
 import {asciiArt, 
@@ -17,7 +19,8 @@ import readline from 'readline';
 
 import { fileURLToPath } from 'url';
 
-// Resolve __dirname in ESM
+// Resolve __dirname in ESM:
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -151,7 +154,7 @@ async function loadDictionaryList() {
                     result.push({ name: f, path: full, size: stat.size });
                 }
             } catch (e) {
-                // ignore 
+                // skip
             }
         }
         return result;
@@ -255,7 +258,7 @@ async function selectCustomDictionaryMenu() {
         return newPath;
     } catch (err) {
         console.error('Error writing file:', err.message);
-        return null;
+        return undefined;
     }
 }
 
@@ -325,9 +328,8 @@ async function hashMenu(restart=false) {
     } 
     const algChoice = await input('\nEnter number: \n');
 
-    if (algChoice.toLowerCase() === 'q') {
-        console.log('\nExiting the program...');
-        process.exit(0);
+    if (algChoice.toLowerCase() === 'b') {
+        await mainMenu();
     }
     const choiceNum = Number(algChoice);
     if (isNaN(choiceNum)) {
@@ -340,12 +342,18 @@ async function hashMenu(restart=false) {
     const type = dictHashes[algChoice];
 
     const text = await input('\nEnter word of choice: \n');
-
-    const result = generateHash(text,type);
-    console.log(`\nResult in ${type} format:\n`)
-    console.log(result);
-
-    await restartHashMenu();
+    const saltedText = await saltingPromp(text);
+    if (saltedText === undefined) {
+        const result = generateHash(text,type);
+        console.log(`\nResult in ${type} format:\n`)
+        console.log(result);
+        await restartHashMenu();
+    } else {
+        const result = generateHash(saltedText,type);
+        console.log(`\nResult in ${type} format + added salt:\n`)
+        console.log(result);
+        await restartHashMenu();
+    }
 }
 
 function pickAlgorithmMenu(n) {
@@ -369,6 +377,31 @@ function pickAlgorithmMenu(n) {
     return dictHashes[n];
 }
 
+async function saltingPromp(text) {
+    const q = (await input('\nWould you like to add solting to word before hashing? (y/n): \n')).toLowerCase();
+    if (q === 'y') {
+        const salt = await input('\nInput salt to add: \n');
+        const q2 = (await input('\nPositioning of the salt (h - head / t - tail): \n')).toLowerCase();
+        if (q2 === 'h') {
+            const result = `${salt}${text}`;
+            return result;
+        } else if (q2 === 't') {
+            const result = `${text}${salt}`;
+            return result;
+        } else {
+           console.log('\nERROR: Invalid form chossen. \n');
+           // Pozivanje rekurzije, again
+           return await saltingPromp(text); 
+        }
+    } else if (q === 'n') {
+        return;
+    } else {
+           console.log('\nERROR: Invalid form chossen. \n');
+           // Pozivanje rekurzije, again
+           return await saltingPromp(text); 
+    }
+}
+
 async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm) {
     if (restart === false) {
         console.log(crackingMenuASCII);
@@ -390,7 +423,11 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
         activeFilePath = await selectDictionaryMenu();
         await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
     } else if (choiceNum === 2) {
-        await selectCustomDictionaryMenu();
+        const customPath = await selectCustomDictionaryMenu();
+        if (customPath) {
+            activeFilePath = customPath;
+        }
+        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
     } else if (choiceNum === 3) {
         activeAttackMethod = await selectAttackMethodMenu();
         await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
@@ -488,8 +525,8 @@ async function mainMenu(restart=false) {
     } else if (choiceNum === 2) {
         await crackingMenu();
     } else {
-        console.log('\nINFO: Exiting the program.\n');
-        //process.exit(0); // TODO - Until the menu is added, stays like this.
+        console.log('\nINFO: Exiting the program.\n');1
+        process.exit(0); // TODO - Until the menu is added, stays like this.
     }
 }
 
