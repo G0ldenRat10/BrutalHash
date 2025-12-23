@@ -13,8 +13,8 @@ Node.js toolkit for hash/dehash related CyberSecurity use and brute-force option
 ## Installation
 
 ### Prerequisites
-- Node.js (v18 or higher recommended)
-- npm (comes with Node.js)
+- Node.js 
+- npm 
 
 ### Setup
 1. Clone the repository:
@@ -53,18 +53,6 @@ Choose from 15 supported algorithms and optionally add salt to your text before 
 - BLAKE2s-256, BLAKE2b-512
 - RIPEMD-160
 - WHIRLPOOL
-
-## Project Structure
-```
-BrutalHash/
-├── main.js              # Main program logic
-├── asciiStorage.js      # ASCII art and menu designs
-├── Wordlists/           # Default wordlists
-│   ├── brute100.txt
-│   └── dictionaryTest.txt
-├── package.json         # Dependencies
-└── README.md
-```
 
 ## Note
 This tool is for educational and authorized security testing purposes only. Use responsibly.
