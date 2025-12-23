@@ -2,6 +2,8 @@
 
 import fs from 'fs'
 import path from 'path'
+import ora from 'ora'
+import chalk from 'chalk'
 import {asciiArt, 
         asciiMenu, 
         mainMenuASCII, 
@@ -27,7 +29,7 @@ const __dirname = path.dirname(__filename);
 function getDictFolder() {
     const preferred = path.join(__dirname, 'Wordlists');
     if (fs.existsSync(preferred) && fs.statSync(preferred).isDirectory()) return preferred;
-    return preferred; // default to preferred path
+    return preferred; 
 }
 
 // Functions:
@@ -43,38 +45,40 @@ function input(question) {
     }));
 }
 
+async function pressEnterToContinue() {
+    await input(chalk.cyan('\nPress Enter to continue...\n'));
+}
+
 function generateHash(text,type) {
     return crypto.createHash(type).update(text).digest('hex');
-    // TO-DO Will soon implement random hash with its clear-text result.
 }
 
 async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm) {
     const startTime = Date.now();
     let attempts = 0;
     
-    // Prvo se izvrsi for loop, onda sledi prikaz
+    // First execute for loop, then display results
     for (let i = 0; i < wordlist.length; i++) {
 
         attempts++;
         const currentWord = wordlist[i].trim();
-        if (!currentWord) continue; // Ako je empty space, nastavi loop dalje
-
+        if (!currentWord) continue; // to skip empty lines
         const testHash = generateHash(currentWord, hashAlgorithm);
 
         if (testHash === targetHash) {
             const endTime = Date.now() - startTime;
-            console.log(`\nDictionary attack finished.\n`)
-            console.log(`\nStatus: FOUND\nPassword: ${currentWord}\nAttempts: ${attempts}\nTime: ${endTime}ms`);
+            console.log(`\nDictionary attack finished.`)
+            console.log(chalk.green(`✓ Status: FOUND\n✓ Password: ${currentWord}\n✓ Attempts: ${attempts}\n✓ Time: ${endTime}ms`));
             return currentWord;
         }
 
         if (attempts % 20000 === 0) {
-            console.log(`\nCurrently at: ${attempts} attempts`);
+            console.log(chalk.blue(`◆ Currently at: ${attempts} attempts`));
         }
     }
     const endTime = Date.now() - startTime;
-    console.log(`\nDictionary attack finished.\n`);
-    console.log(`\nStatus: NOT FOUND\nPassword: Unknown \nAttempts: ${attempts}\nTime: ${endTime}ms`);
+    console.log(`\nDictionary attack finished.`);
+    console.log(chalk.red(`✗ Status: NOT FOUND\n✗ Password: Unknown \n✗ Attempts: ${attempts}\n✗ Time: ${endTime}ms`));
 }
 
 async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
@@ -92,8 +96,6 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
     let endTime = null;
 
     for await (const line of rl) {
-        // A line can contain multiple words separated by whitespaces
-        // Spliting the lines into tokens and testing each token separately
         const tokens = line.split(/\s+/);
         for (const token of tokens) {
             const currentWord = token.trim();
@@ -112,9 +114,9 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
 
     endTime = Date.now() - startTime;
     rl.close();
-    console.log(`\nDictionary attack finished.\n`);
-    if (found === null) console.log(`\nStatus: NOT FOUND\nPassword: Unknown \nAttempts: ${attempts}\nTime: ${endTime}ms`);
-    else console.log(`\nStatus: FOUND\nPassword: ${found}\nAttempts: ${attempts}\nTime: ${endTime}ms`);
+    console.log(`\nDictionary attack finished.`);
+    if (found === null) console.log(chalk.red(`✗ Status: NOT FOUND\n✗ Password: Unknown \n✗ Attempts: ${attempts}\n✗ Time: ${endTime}ms`));
+    else console.log(chalk.green(`✓ Status: FOUND\n✓ Password: ${found}\n✓ Attempts: ${attempts}\n✓ Time: ${endTime}ms`));
     return found;
 }
 
@@ -129,7 +131,7 @@ async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attac
             // Stream attack, resource saving
             return await dictionaryAttackStream(targetHash, wordListSource, hashAlgorithm);
         } else {
-            // Memory attack, easy on resource
+            // Memory attack, hard on resource
             return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm);
         }
     // If attackMethod is picked:
@@ -143,6 +145,7 @@ async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attac
 
 async function loadDictionaryList() {
     const folderPath = getDictFolder();
+    const spinner = ora('Loading dictionary list...').start();
     try {
         const files = await fs.promises.readdir(folderPath);
         const result = [];
@@ -157,9 +160,10 @@ async function loadDictionaryList() {
                 // skip
             }
         }
+        spinner.succeed('Dictionary list loaded!');
         return result;
     } catch (err) {
-        console.error('Error reading Wordlists folder:', err.message);
+        spinner.fail('Error reading Wordlists folder');
         return [];
     }
 }
@@ -195,18 +199,18 @@ async function selectDictionaryMenu(restart=false) {
 
     const choiceNum = Number(userInputRaw);
     if (isNaN(choiceNum)) {
-        console.log('\nERROR: Number must be entered.\n');
+        console.log(chalk.red('\nERROR: Number must be entered.\n'));
         return await selectDictionaryMenu(true);
     }
 
     if (choiceNum < 1 || choiceNum > listLength) {
-        console.log('\nERROR: Number must be entered in given range.\n');
+        console.log(chalk.red('\nERROR: Number must be entered in given range.\n'));
         return await selectDictionaryMenu(true);
     }
 
     const idx = choiceNum - 1;
     const setFilePath = dictionaryList[idx].path;
-    console.log(`\nINFO: '${dictionaryList[idx].name}' set as active file.\n`);
+    console.log(chalk.green(`✓ '${dictionaryList[idx].name}' set as active file.`));
     return setFilePath;
 } 
 
@@ -217,7 +221,7 @@ async function selectCustomDictionaryMenu() {
     console.log(dictionaryCustomName);
     let userInput = (await input('\nEnter file name (without extension): \n')).trim();
     if (!userInput) {
-        console.log('\nERROR: File name cannot be empty.');
+        console.log(chalk.red('\nERROR: File name cannot be empty.'));
         return await selectCustomDictionaryMenu();
     }
     // sanitize filename (basic)
@@ -226,12 +230,12 @@ async function selectCustomDictionaryMenu() {
     console.log(dictionaryCustomTitle);
     const userInput2 = (await input('\nHow many words to add: \n')).trim();
     if (isNaN(userInput2)) {
-        console.log('\nERROR: Number must be entered.\n');
+        console.log(chalk.red('\nERROR: Number must be entered.\n'));
         return await selectCustomDictionaryMenu();
     }
     const numberOfWords = Number(userInput2);
     if (numberOfWords < 1) {
-        console.log('\nERROR: Invalid range.\n');
+        console.log(chalk.red('\nERROR: Invalid range.\n'));
         return await selectCustomDictionaryMenu();
     }
 
@@ -253,11 +257,12 @@ async function selectCustomDictionaryMenu() {
 
     const newPath = path.join(dictDir, userInput);
     try {
+        const spinner = ora('Writing file...').start();
         await fs.promises.writeFile(newPath, listOfWords.join('\n') + '\n', 'utf8');
-        console.log(`INFO: File successfully written to ${newPath}`);
+        spinner.succeed(chalk.green(`File successfully written to ${newPath}`));
         return newPath;
     } catch (err) {
-        console.error('Error writing file:', err.message);
+        console.error(chalk.red('Error writing file:'), err.message);
         return undefined;
     }
 }
@@ -276,12 +281,12 @@ async function selectAttackMethodMenu(restart=false) {
     const choiceNum = Number(userInputRaw);
 
     if (isNaN(choiceNum)) {
-        console.log('\nERROR: Number must be entered.\n');
+        console.log(chalk.red('\nERROR: Number must be entered.\n'));
         return await selectAttackMethodMenu(true);
     }
 
     if (choiceNum < 1 || choiceNum > 2) {
-        console.log('\nERROR: Number must be entered in given range.\n');
+        console.log(chalk.red('\nERROR: Number must be entered in given range.\n'));
         return await selectAttackMethodMenu(true);
     }
 
@@ -298,7 +303,7 @@ async function hashMenu(restart=false) {
     async function restartHashMenu() {
     const restartQ = await input(`\n'b' - return to Hash Menu , 'q' - return to Main Menu : \n`)
     if (restartQ.toLowerCase() != 'b' && restartQ.toLowerCase() != 'q') {
-        console.log('ERROR: Enter valid choice.');
+        console.log(chalk.red('ERROR: Enter valid choice.'));
         await restartHashMenu();
     } else if (restartQ.toLowerCase() === 'q') {
         await mainMenu();
@@ -333,10 +338,10 @@ async function hashMenu(restart=false) {
     }
     const choiceNum = Number(algChoice);
     if (isNaN(choiceNum)) {
-        console.log('\nERROR: Number must be entered.');
+        console.log(chalk.red('\nERROR: Number must be entered.'));
         await hashMenu(true);
     } else if (choiceNum < 1 || choiceNum > 15) {
-        console.log('\nERROR: Number between 1-15 must be entered.');
+        console.log(chalk.red('\nERROR: Number between 1-15 must be entered.'));
         await hashMenu(true);
     }
     const type = dictHashes[algChoice];
@@ -345,13 +350,13 @@ async function hashMenu(restart=false) {
     const saltedText = await saltingPromp(text);
     if (saltedText === undefined) {
         const result = generateHash(text,type);
-        console.log(`\nResult in ${type} format:\n`)
-        console.log(result);
+        console.log(`Result in ${type} format:\n`)
+        console.log(chalk.yellow(result));
         await restartHashMenu();
     } else {
         const result = generateHash(saltedText,type);
-        console.log(`\nResult in ${type} format + added salt:\n`)
-        console.log(result);
+        console.log(`Result in ${type} format + added salt:\n`)
+        console.log(chalk.yellow(result));
         await restartHashMenu();
     }
 }
@@ -378,26 +383,31 @@ function pickAlgorithmMenu(n) {
 }
 
 async function saltingPromp(text) {
-    const q = (await input('\nWould you like to add solting to word before hashing? (y/n): \n')).toLowerCase();
+
+    const q = (await input('\nWould you like to add salt before hashing? (y/n): \n')).toLowerCase();
+
     if (q === 'y') {
         const salt = await input('\nInput salt to add: \n');
-        const q2 = (await input('\nPositioning of the salt (h - head / t - tail): \n')).toLowerCase();
-        if (q2 === 'h') {
+        async function getResult(salt,text) {
+            const q2 = (await input('\nPositioning of the salt (h - head / t - tail): \n')).toLowerCase();
+            if (q2 === 'h') {
             const result = `${salt}${text}`;
             return result;
-        } else if (q2 === 't') {
-            const result = `${text}${salt}`;
-            return result;
-        } else {
-           console.log('\nERROR: Invalid form chossen. \n');
-           // Pozivanje rekurzije, again
-           return await saltingPromp(text); 
+            } else if (q2 === 't') {
+                const result = `${text}${salt}`;
+                return result;
+            } else {
+                console.log(chalk.red('\nERROR: Invalid choice. \n'));
+                // Recursion again
+                return await getResult(salt,text,q2);
+            }
         }
+        return getResult();
     } else if (q === 'n') {
         return;
     } else {
-           console.log('\nERROR: Invalid form chossen. \n');
-           // Pozivanje rekurzije, again
+           console.log(chalk.red('\nERROR: Invalid input. \n'));
+           // Recursion again
            return await saltingPromp(text); 
     }
 }
@@ -410,10 +420,10 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
     if (choiceNum === 'b' || choiceNum === 'B') {
         await mainMenu();
     } else if (isNaN(choiceNum)) {
-        console.log('\nERROR: Number must be entered.\n');
+        console.log(chalk.red('\nERROR: Number must be entered.\n'));
         await crackingMenu(true);
     } else if (choiceNum < 1 || choiceNum > 7) {
-        console.log('\nERROR: Number between 1-7 must be entered.\n');
+        console.log(chalk.red('\nERROR: Number between 1-7 must be entered.\n'));
         await crackingMenu(true);
     }
 
@@ -433,16 +443,17 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
         await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
     } else if (choiceNum === 4) {
         activeHashToCrack = await input('\nEnter hash to crack: \n');
+        console.log(chalk.green(`✓ Hash set: ${activeHashToCrack.substring(0, 20)}...`));
         await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
     } else if (choiceNum === 5) {
         console.log(asciiMenu);
         let inputNumber = await input('\nEnter number: \n');
         inputNumber = inputNumber.trim();
         if (isNaN(inputNumber) || inputNumber < 1 || inputNumber > 15) {
-            console.log('\nERROR: Number between 1-15 must be entered.\n');
+            console.log(chalk.red('\nERROR: Number between 1-15 must be entered.\n'));
         } else {
             activeHashAlgorithm = pickAlgorithmMenu(inputNumber);
-            console.log(`\nINFO: '${activeHashAlgorithm}' set as active hash algorithm.\n`);
+            console.log(chalk.green(`✓ '${activeHashAlgorithm}' set as active hash algorithm.`));
         }
         await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
     } else if (choiceNum === 6) {
@@ -451,37 +462,37 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
         console.log(`- Hash type: ${activeHashAlgorithm}`);
         console.log(`- Wordlist: ${activeFilePath}`);
         if (activeAttackMethod === 'Dictionary_Attack') {
-            console.log(`- Attack Method: ${activeAttackMethod} (WARNING: NOT SUGGESTED FOR PC WITH LOW RAM!)`);
+            console.log(chalk.yellow(`- Attack Method: ${activeAttackMethod} (WARNING: NOT SUGGESTED FOR PC WITH LOW RAM!)`));
         } else {
             console.log(`- Attack Method: ${activeAttackMethod}`);
         }
         console.log(dictionaryListMenuASCIITail);
         await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
     } else if (choiceNum === 7) {
-        // Validacija da su svi podaci uneti
+        // Validation that all data is entered
         if (!activeFilePath) {
-            console.log('\nERROR: Please select a wordlist first (Option 1).\n');
+            console.log(chalk.red('\nERROR: Please select a wordlist first (Option 1).\n'));
             await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
             return;
         }
         if (!activeAttackMethod) {
-            console.log('\nERROR: Please select attack method first (Option 3).\n');
+            console.log(chalk.red('\nERROR: Please select attack method first (Option 3).\n'));
             await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
             return;
         }
         if (!activeHashToCrack) {
-            console.log('\nERROR: Please enter target hash first (Option 4).\n');
+            console.log(chalk.red('\nERROR: Please enter target hash first (Option 4).\n'));
             await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
             return;
         }
         if (!activeHashAlgorithm) {
-            console.log('\nERROR: Please select hash algorithm first (Option 5).\n');
+            console.log(chalk.red('\nERROR: Please select hash algorithm first (Option 5).\n'));
             await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
             return;
         }
         
         console.log('\n='.repeat(50));
-        console.log('STATUS: Attack started');
+        console.log(chalk.cyan('STATUS: Attack started'));
         console.log('='.repeat(50));
         console.log('\n');
         
@@ -489,9 +500,10 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
 
         if (activeAttackMethod === 'Dictionary_Attack') {
             // Dictionary_Attack
-            console.log('\nLoading wordlist into memory...\n');
+            const spinner = ora('Loading wordlist into memory...').start();
             const content = await fs.promises.readFile(activeFilePath, 'utf8');
             wordListSource = content.split('\n');
+            spinner.succeed(`Loaded ${wordListSource.length} words`);
         } else {
             // Stream_Attack 
             wordListSource = activeFilePath;
@@ -499,7 +511,7 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
         
         await dictionaryAttack(activeHashToCrack, wordListSource, activeHashAlgorithm);
         
-        const continueChoice = await input('\nPress Enter to return to cracking menu...');
+        await pressEnterToContinue();
         await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
     } else {
         console.log('\nINFO: Exiting the program.\n');
@@ -513,10 +525,10 @@ async function mainMenu(restart=false) {
     }
     let choiceNum = await input('\nEnter number: \n');
     if (isNaN(choiceNum)) {
-        console.log('\nERROR: Number must be entered.\n');
+        console.log(chalk.red('\nERROR: Number must be entered.\n'));
         await mainMenu(true);
     } else if (choiceNum < 1 || choiceNum > 3) {
-        console.log('\nERROR: Number between 1-3 must be entered.\n');
+        console.log(chalk.red('\nERROR: Number between 1-3 must be entered.\n'));
         await mainMenu(true);
     }
     choiceNum = Number(choiceNum);
@@ -525,22 +537,12 @@ async function mainMenu(restart=false) {
     } else if (choiceNum === 2) {
         await crackingMenu();
     } else {
-        console.log('\nINFO: Exiting the program.\n');1
-        process.exit(0); // TODO - Until the menu is added, stays like this.
+        console.log(chalk.yellow('\nINFO: Exiting the program.\n'));
+        process.exit(0);
     }
 }
 
-// Main
-console.log(asciiArt);
+// Main: 
+
+console.log(chalk.yellow(asciiArt));
 await mainMenu();
-
-// // Dictionary test:
-// // Soon updated with own Menu
-// console.log('\nStarting Dictionary test showcase...\n')
-// const wordToTest = 'randomWordHere';
-// const targetHash = crypto.createHash('md5').update(wordToTest).digest('hex');
-// console.log(`Hash to test: ${targetHash}, Word in clear-text: ${wordToTest}\n\n`);
-// const wordListSource = './BrutalHashJS/Wordlists/dictionaryTest.txt';
-// const hashAlgorithm = 'md5';
-
-// await dictionaryAttack(targetHash,wordListSource,hashAlgorithm);
