@@ -13,10 +13,28 @@ Node.js toolkit for hash/dehash related CyberSecurity use and brute-force option
 ## Installation
 
 ### Prerequisites
-- Node.js 
-- npm 
+- Node.js (v18 or higher)
+- npm (comes with Node.js)
 
-### Setup
+If you do not have Node.js:
+- Easiest: install via Node Version Manager (NVM)
+	```bash
+	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+	source ~/.bashrc
+	nvm install 18
+	nvm use 18
+	```
+- Or download an LTS installer from https://nodejs.org and follow the prompts.
+
+### Quick start
+```bash
+git clone https://github.com/G0ldenRat10/BrutalHash.git
+cd BrutalHash
+npm install
+npm start    # or: node main.js
+```
+
+### Setup (step-by-step)
 1. Clone the repository:
 ```bash
 git clone https://github.com/G0ldenRat10/BrutalHash.git
@@ -30,6 +48,8 @@ npm install
 
 3. Run the program:
 ```bash
+npm start    # uses package.json start script
+# or run directly:
 node main.js
 ```
 
@@ -53,6 +73,16 @@ Choose from 15 supported algorithms and optionally add salt to your text before 
 - BLAKE2s-256, BLAKE2b-512
 - RIPEMD-160
 - WHIRLPOOL
+
+## Project Structure
+```
+BrutalHash/
+├── main.js              # Main program logic
+├── asciiStorage.js      # ASCII art and menu designs
+├── Wordlists/           # Default wordlists (example: test100.txt)
+├── package.json         # Dependencies
+└── README.md
+```
 
 ## Note
 This tool is for educational and authorized security testing purposes only. Use responsibly.
