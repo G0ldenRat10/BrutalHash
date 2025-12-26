@@ -3,12 +3,10 @@ Node.js toolkit for hash/dehash related CyberSecurity use and brute-force option
 
 ## Features
 - **Hash Generation**: Support for 15+ hash algorithms (MD5, SHA-1, SHA-2, SHA-3, BLAKE2, RIPEMD-160, WHIRLPOOL)
-- **Dictionary Attack**: Crack hashes using wordlists with two attack methods:
-- **Dictionary Attack**: Fast, loads wordlist into memory (classic algorithm for brute-forcing)
-- **Stream Attack**: Memory-efficient, processes line by line (better for lower specifications)
-- **Compatible with rockyou**: Works with any bigger file, doesn't matter the size
+- **Dictionary Attack**: Dva moda (in-memory i stream). In-memory je brži ali troši više RAM-a, stream je štedljiviji i radi i na velikim (rockyou) fajlovima.
 - **Custom Wordlists**: Create your own wordlists on the fly
 - **Salt Support**: Add salt before hashing (head or tail position)
+- **Hash Pattern Test**: Nalepi hash i dobićeš najverovatnije algoritme na osnovu regex/dužine
 - **Color-coded UI**: Clear visual feedback with loading indicators
 
 ## Installation
@@ -65,6 +63,11 @@ Choose from 15 supported algorithms and optionally add salt to your text before 
 4. Select the hash algorithm type
 5. View status and start the attack
 
+### Hash Pattern Test
+1. Paste hash value into input field
+2. Tool runs regex for MD5, SHA1, SHA2, SHA3, BLAKE2, RIPEMD-160, SHAKE128/256, SM3 ...
+3. Writes down the list of the potential algorithms used for that specific hash value.
+
 ## Supported Hash Algorithms
 - MD5, MD5-SHA1
 - SHA-1
@@ -77,10 +80,14 @@ Choose from 15 supported algorithms and optionally add salt to your text before 
 ## Project Structure
 ```
 BrutalHash/
-├── main.js              # Main program logic
-├── asciiStorage.js      # ASCII art and menu designs
-├── Wordlists/           # Default wordlists (example: test100.txt)
+├── main.js              # Glavni program (ostaje netaknut)
+├── asciiStorage.js      # Re-export ASCII resursa iz src/ui/ascii.js
+├── src/
+│   └── ui/
+│       └── ascii.js     # ASCII art i layout menija
+├── Wordlists/           # Podrazumevani wordlist primeri (npr. test100.txt)
 ├── package.json         # Dependencies
+├── install_node_20.sh   # Pomoćni installer za Node 20
 └── README.md
 ```
 

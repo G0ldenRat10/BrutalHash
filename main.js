@@ -13,7 +13,8 @@ import {asciiArt,
         dictionaryCustomTitle,
         dictionaryCustomName,
         statusDictionary,
-        dictionaryAttackMethodMenuASCII} from './asciiStorage.js'
+        dictionaryAttackMethodMenuASCII,
+        patternRegexHashASCII} from './asciiStorage.js'
 import crypto from 'crypto';
 import readline from 'readline';
 
@@ -311,8 +312,8 @@ async function hashMenu(restart=false) {
 
     const dictHashes = {
     1:'md5',
-    2:'sha1',
-    3:'sha256',
+    2:'md5-sha1',
+    3:'sha1',
     4:'sha224',
     5:'sha256',
     6:'sha384',
@@ -324,7 +325,9 @@ async function hashMenu(restart=false) {
     12:'blake2s256',
     13:'blake2b512',
     14:'ripemd160',
-    15:'whirlpool',
+    15:'shake128',
+    16:'shake256',
+    17:'sm3'
     };
     if (restart === false) {
         console.log(asciiMenu);
@@ -338,8 +341,8 @@ async function hashMenu(restart=false) {
     if (isNaN(choiceNum)) {
         console.log(chalk.red('\nERROR: Number must be entered.'));
         await hashMenu(true);
-    } else if (choiceNum < 1 || choiceNum > 15) {
-        console.log(chalk.red('\nERROR: Number between 1-15 must be entered.'));
+    } else if (choiceNum < 1 || choiceNum > 17) {
+        console.log(chalk.red('\nERROR: Number between 1-17 must be entered.'));
         await hashMenu(true);
     }
     const type = dictHashes[algChoice];
@@ -361,21 +364,23 @@ async function hashMenu(restart=false) {
 
 function pickAlgorithmMenu(n) {
     const dictHashes = {
-        '1':'md5',
-        '2':'sha1',
-        '3':'sha256',
-        '4':'sha224',
-        '5':'sha256',
-        '6':'sha384',
-        '7':'sha512',
-        '8':'sha3-224',
-        '9':'sha3-256',
-        '10':'sha3-384',
-        '11':'sha3-512',
-        '12':'blake2s256',
-        '13':'blake2b512',
-        '14':'ripemd160',
-        '15':'whirlpool',
+        1:'md5',
+        2:'md5-sha1',
+        3:'sha1',
+        4:'sha224',
+        5:'sha256',
+        6:'sha384',
+        7:'sha512',
+        8:'sha3-224',
+        9:'sha3-256',
+        10:'sha3-384',
+        11:'sha3-512',
+        12:'blake2s256',
+        13:'blake2b512',
+        14:'ripemd160',
+        15:'shake128',
+        16:'shake256',
+        17:'sm3'
     };
     return dictHashes[n];
 }
@@ -517,6 +522,73 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
     }
 }
 
+async function patternRegexHash(restart=false) {
+
+    function isValidHash(hash,regex) {
+        return regex.test(hash);
+    }
+
+    async function userInputIsItValid() {
+        let userInput = await input("\n'r' to restart , 'q' for main menu: \n");
+        if (userInput.toLowerCase() === 'r') {
+            await patternRegexHash(true);
+        } else if (userInput.toLowerCase() === 'q') {
+            await mainMenu();
+        } else {
+            console.log(chalk.red('\nERROR: Invalid option.\n'))
+            await userInputIsItValid();
+        }
+    }
+
+    if (restart === false) {
+        console.log(patternRegexHashASCII);
+    }
+    let inputHash = await input(`\nEnter hash: \n`);
+
+    const regexAndHash = {
+        'md5': /^[a-fA-F0-9]{32}$/,                      // 32 HEX
+        'md5-sha1': /^[a-fA-F0-9]{32}[a-fA-F0-9]{40}$/,  // 32+40=72 HEX --> (md5:32)+(sha1:40)
+        'sha1': /^[a-fA-F0-9]{40}$/,                     // 40 HEX
+        'sha224': /^[a-fA-F0-9]{56}$/,                   // 56 HEX
+        'sha256': /^[a-fA-F0-9]{64}$/,                   // 64 HEX
+        'sha384': /^[a-fA-F0-9]{96}$/,                   // 96 HEX
+        'sha512': /^[a-fA-F0-9]{128}$/,                  // 128 HEX
+        'sha3-224': /^[a-fA-F0-9]{56}$/,                 // 56 HEX
+        'sha3-256': /^[a-fA-F0-9]{64}$/,                 // 64 HEX
+        'sha3-384': /^[a-fA-F0-9]{96}$/,                 // 96 HEX
+        'sha3-512': /^[a-fA-F0-9]{128}$/,                // 128 HEX
+        'blake2s256': /^[a-fA-F0-9]{64}$/,               // 64 HEX
+        'blake2b512': /^[a-fA-F0-9]{128}$/,              // 128 HEX
+        'ripemd160': /^[a-fA-F0-9]{40}$/,                // 40 HEX - Bitcoin algorithm, simillar to SHA1
+        'shake128': /^[a-fA-F0-9]{32}$/,                 // Depends - likely 32 hex - XOF Function
+        'shake256': /^[a-fA-F0-9]{64}$/,                 // Depends - likely 64 hex 
+        'sm3': /^[a-fA-F0-9]{64}$/                       // 64 HEX- Chinese SHA256
+    };
+
+    let capturePotentialHashesList = [];
+
+    console.log(chalk.yellow(`\nLooking for potential matches...\n`));
+    for (let key in regexAndHash) {
+        let hashName = key;
+        let regex = regexAndHash[key];
+        if (isValidHash(inputHash,regex)) {
+            capturePotentialHashesList.push(hashName);
+        } 
+    }
+    
+    if (capturePotentialHashesList.length > 0) {
+        console.log(chalk.green('\nINFO: Success\n'));
+        console.log(chalk.yellow(`\nPotential HASH ALGORITHMS for: ${inputHash}\n`));
+        for (let i = 0; i < capturePotentialHashesList.length; i++) {
+            console.log(chalk.yellow(`${i + 1}. ${capturePotentialHashesList[i]}`));
+        }
+        await userInputIsItValid();
+    } else {
+        console.log(chalk.red('\nINFO: No specific algorithm found for this input.\n'));
+        await userInputIsItValid();
+    }
+}
+
 async function mainMenu(restart=false) {
     if (restart === false) {
         console.log(mainMenuASCII);
@@ -525,8 +597,8 @@ async function mainMenu(restart=false) {
     if (isNaN(choiceNum)) {
         console.log(chalk.red('\nERROR: Number must be entered.\n'));
         await mainMenu(true);
-    } else if (choiceNum < 1 || choiceNum > 3) {
-        console.log(chalk.red('\nERROR: Number between 1-3 must be entered.\n'));
+    } else if (choiceNum < 1 || choiceNum > 4) {
+        console.log(chalk.red('\nERROR: Number between 1-4 must be entered.\n'));
         await mainMenu(true);
     }
     choiceNum = Number(choiceNum);
@@ -534,6 +606,8 @@ async function mainMenu(restart=false) {
         await hashMenu();
     } else if (choiceNum === 2) {
         await crackingMenu();
+    } else if (choiceNum === 3) {
+        await patternRegexHash();
     } else {
         console.log(chalk.yellow('\nINFO: Exiting the program.\n'));
         process.exit(0);
@@ -541,6 +615,6 @@ async function mainMenu(restart=false) {
 }
 
 // Main: 
-
+console.log(crypto.getHashes());
 console.log(chalk.yellow(asciiArt));
 await mainMenu();
