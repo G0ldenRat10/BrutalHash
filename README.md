@@ -20,7 +20,7 @@ If you do not have Node.js:
 - Easiest: install via Node Version Manager (NVM)
 	```bash
 	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-	source ~/.bashrc
+	source ~/.bashrc    # ~/.zshrc -> if user shell ZSH
 	nvm install 18
 	nvm use 18
 	```
