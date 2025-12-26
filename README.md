@@ -38,7 +38,20 @@ If you do not have Node.js with version 20.0.0, pick one of the options:
    	chmod +x install_node_20.sh
    	./install_node_20.sh
    	```
-   
+
+### Install Dependencies
+After Node.js is installed, install npm dependencies (built-in installer will do it for you):
+```bash
+npm install
+```
+
+## Running BrutalHash
+Once dependencies are installed, start the program:
+
+```bash
+node main.js
+```
+
 ## Usage
 
 ### Hash Generation

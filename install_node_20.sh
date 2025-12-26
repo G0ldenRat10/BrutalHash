@@ -37,3 +37,8 @@ node -v
 
 echo "INFO: Node Binary location:"
 which node
+
+echo "INFO: Installing npm dependencies..."
+npm install
+
+echo "STATUS: Setup complete! You can start the program by running: node main.js"
