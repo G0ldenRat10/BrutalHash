@@ -13,46 +13,32 @@ Node.js toolkit for hash/dehash related CyberSecurity use and brute-force option
 ## Installation
 
 ### Prerequisites
-- Node.js (v18 or higher)
+- Node.js (v20)
 - npm (comes with Node.js)
 
-If you do not have Node.js:
-- Easiest: install via Node Version Manager (NVM)
+### Setup
+```bash
+git clone https://github.com/G0ldenRat10/BrutalHash.git
+cd BrutalHash
+```
+
+If you do not have Node.js with version 20.0.0, pick one of the options:
+- Manually: install via Node Version Manager (NVM)
 	```bash
 	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 	source ~/.bashrc    # ~/.zshrc -> if user shell ZSH
-	nvm install 18
-	nvm use 18
+	nvm install 20
+	nvm use 20
 	```
-- Or download an LTS installer from https://nodejs.org and follow the prompts.
+ 
+- Download an LTS installer from https://nodejs.org and follow the prompts.
 
-### Quick start
-```bash
-git clone https://github.com/G0ldenRat10/BrutalHash.git
-cd BrutalHash
-npm install
-npm start    # or: node main.js
-```
-
-### Setup (step-by-step)
-1. Clone the repository:
-```bash
-git clone https://github.com/G0ldenRat10/BrutalHash.git
-cd BrutalHash
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Run the program:
-```bash
-npm start    # uses package.json start script
-# or run directly:
-node main.js
-```
-
+- Built-in installer (easiest): install via bash script that comes with downloading BrutalHash
+  	```bash
+   	chmod +x install_node_20.sh
+   	./install_node_20.sh
+   	```
+   
 ## Usage
 
 ### Hash Generation
