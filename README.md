@@ -4,8 +4,9 @@ Node.js toolkit for hash/dehash related CyberSecurity use and brute-force option
 ## Features
 - **Hash Generation**: Support for 15+ hash algorithms (MD5, SHA-1, SHA-2, SHA-3, BLAKE2, RIPEMD-160, WHIRLPOOL)
 - **Dictionary Attack**: Crack hashes using wordlists with two attack methods:
-- **Dictionary Attack**: Fast, loads wordlist into memory
-- **Stream Attack**: Memory-efficient, processes line by line
+- **Dictionary Attack**: Fast, loads wordlist into memory (classic algorithm for brute-forcing)
+- **Stream Attack**: Memory-efficient, processes line by line (better for lower specifications)
+- **Compatible with rockyou.txt**: Works with any bigger file, doesn't matter the size
 - **Custom Wordlists**: Create your own wordlists on the fly
 - **Salt Support**: Add salt before hashing (head or tail position)
 - **Color-coded UI**: Clear visual feedback with loading indicators
