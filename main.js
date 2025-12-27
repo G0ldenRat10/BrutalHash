@@ -615,6 +615,7 @@ async function mainMenu(restart=false) {
 }
 
 // Main: 
-console.log(crypto.getHashes());
-console.log(chalk.yellow(asciiArt));
+console.log(chalk.rgb(255,0,0).bold(asciiArt));
+console.log(chalk.rgb(200,0,0).italic('               Developed by: ') + chalk.rgb(148, 126, 0, 1).italic('G0ldenRat10'));
+console.log(chalk.rgb(200,0,0).italic('     GitHub: ') + chalk.rgb(65, 65, 250, 1).italic('https://github.com/G0ldenRat10/BrutalHash'));
 await mainMenu();

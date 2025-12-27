@@ -1,12 +1,14 @@
 # BrutalHash
 Node.js toolkit for hash/dehash related CyberSecurity use and brute-force option.
 
+![My Image](https://github.com/G0ldenRat10/PrivatePictures/blob/main/Screenshot%20from%202025-12-27%2011-38-20.png?raw=true)
+
 ## Features
 - **Hash Generation**: Support for 15+ hash algorithms (MD5, SHA-1, SHA-2, SHA-3, BLAKE2, RIPEMD-160, WHIRLPOOL)
-- **Dictionary Attack**: Dva moda (in-memory i stream). In-memory je brži ali troši više RAM-a, stream je štedljiviji i radi i na velikim (rockyou) fajlovima.
+- **Dictionary Attack**: Two mods (in-memory and stream). In-memory is faster but it eats more RAM, stream if better for low PC power and also works on big (rockyou) files.
 - **Custom Wordlists**: Create your own wordlists on the fly
 - **Salt Support**: Add salt before hashing (head or tail position)
-- **Hash Pattern Test**: Nalepi hash i dobićeš najverovatnije algoritme na osnovu regex/dužine
+- **Hash Pattern Test**: Input hash value and test to find out algorithm
 - **Color-coded UI**: Clear visual feedback with loading indicators
 
 ## Installation
@@ -76,20 +78,6 @@ Choose from 15 supported algorithms and optionally add salt to your text before 
 - BLAKE2s-256, BLAKE2b-512
 - RIPEMD-160
 - WHIRLPOOL
-
-## Project Structure
-```
-BrutalHash/
-├── main.js              # Glavni program (ostaje netaknut)
-├── asciiStorage.js      # Re-export ASCII resursa iz src/ui/ascii.js
-├── src/
-│   └── ui/
-│       └── ascii.js     # ASCII art i layout menija
-├── Wordlists/           # Podrazumevani wordlist primeri (npr. test100.txt)
-├── package.json         # Dependencies
-├── install_node_20.sh   # Pomoćni installer za Node 20
-└── README.md
-```
 
 ## Note
 This tool is for educational and authorized security testing purposes only. Use responsibly.
