@@ -1,10 +1,10 @@
 # BrutalHash
-This Node.js toolkit includes: hash/dehash + dictionary attack (stream/classic) + format matching with regex
+This Node.js toolkit includes: hash/dehash (with salting) + dictionary attack (stream/classic) + format matching with regex
 
 ![My Image](https://github.com/G0ldenRat10/PrivatePictures/blob/main/Screenshot%20from%202025-12-27%2011-38-20.png?raw=true)
 
 ## Features
-- **Hash Generation**: Support for 15+ hash algorithms (MD5, SHA-1, SHA-2, SHA-3, BLAKE2, RIPEMD-160, WHIRLPOOL)
+- **Hash Generation**: Support for 17 hash algorithms (MD5, SHA-1, SHA-2, SHA-3, BLAKE2, RIPEMD-160, WHIRLPOOL...)
 - **Dictionary Attack**: Two mods (in-memory and stream). In-memory is faster but it eats more RAM, stream if better for low PC power and also works on big (rockyou) files.
 - **Custom Wordlists**: Create your own wordlists on the fly
 - **Salt Support**: Add salt before hashing (head or tail position)
@@ -56,7 +56,7 @@ node main.js
 ## Usage
 
 ### Hash Generation
-Choose from 15 supported algorithms and optionally add salt to your text before hashing.
+Choose from 17 supported algorithms and optionally add salt to your text before hashing.
 
 ### Dictionary Attack
 1. Select a wordlist (or create a custom one)
