@@ -22,23 +22,23 @@ import { fileURLToPath } from 'url';
 
 // Resolve __dirname in ESM:
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url); // is -> ../BrutalHash/main.js 
+const __dirname = path.dirname(__filename); // Turn to DIRECTORY that is step above /BrutalHash
 
 function getDictFolder() {
-    const preferred = path.join(__dirname, 'Wordlists');
-    if (fs.existsSync(preferred) && fs.statSync(preferred).isDirectory()) return preferred;
+    const preferred = path.join(__dirname, 'Wordlists'); // /BrutalHash/Wordlists check -> ?
+    if (fs.existsSync(preferred) && fs.statSync(preferred).isDirectory()) return preferred;  // turn back even if it exists
     return preferred; 
 }
 
 // Functions:
 
 function input(question) {
-    const rl = readline.createInterface({
+    const rl = readline.createInterface({    // interface readline
     input: process.stdin,
     output: process.stdout
     });
-    return new Promise(resolve => rl.question(question, ans => {
+    return new Promise(resolve => rl.question(question, ans => {   // wraps promise --> rl.question is callback based question: '' , ans: user input
         rl.close();
         resolve(ans);
     }));
@@ -53,15 +53,21 @@ function generateHash(text,type) {
 }
 
 async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm) {
+    // Algorithm:
+    // words --> RAM --> iterate 
+    // words = [] (already stored in RAM)
+
     const startTime = Date.now();
     let attempts = 0;
     
-    // First execute for loop, then display results
+    // First to execute for loop, then display results
     for (let i = 0; i < wordlist.length; i++) {
 
-        attempts++;
         const currentWord = wordlist[i].trim();
         if (!currentWord) continue; // to skip empty lines
+
+        // Note: here I put attempts bellow if(!currentWord) continue; -> since that is the code that empty's the lines; BEFOREFIX: ora_loader was at: 20m, FIX: it's now at 20k
+        attempts++; 
         const testHash = generateHash(currentWord, hashAlgorithm);
 
         if (testHash === targetHash) {
@@ -81,27 +87,36 @@ async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm) {
 }
 
 async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
-    const startTime = Date.now();
+    // Algorithm:
+    // words if count of them is example:100 -> 1/100 => word -> 1 line -> generateHash(word, alg)... --> until: 100/100 or n(1 - 100) a match
 
-    const fileStream = fs.createReadStream(filePath);
+    const startTime = Date.now();  // Start the time capture
+    const spinner = ora('Starting stream attack...').start(); // Start the spinner
+    spinner.color = 'yellow'; // set color spinner 
 
-    const rl = readline.createInterface({
-        input: fileStream,
-        crlfDelay: Infinity
-    });
+    const fileStream = fs.createReadStream(filePath);   // reads in chunks
 
-    let attempts = 0;
+    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity  });  // chunk to lines with readline
+
+    // start variables set:
+    let attempts = 0;     
     let found = null;
     let endTime = null;
 
-    for await (const line of rl) {
-        const tokens = line.split(/\s+/);
+    for await (const line of rl) {  // asinhron iterate
+        const tokens = line.split(/\s+/); // in case words not devided by rows, but by space,tab,\n, take regex to trim it down to format i need
         for (const token of tokens) {
             const currentWord = token.trim();
             if (!currentWord) continue;
 
             attempts++;
-            const testHash = generateHash(currentWord, hashAlgorithm);
+            const testHash = generateHash(currentWord, hashAlgorithm);  // call -> generateHash() -> return result
+
+            // Updating spinner every 20,000 attempts
+            if (attempts % 10000 === 0) {
+                const timePassed = Date.now() - startTime;
+                spinner.text = chalk.yellow(`Attempts: ${attempts} | Time: ${timePassed} ms\n`);
+            }
 
             if (testHash === targetHash) {
                 found = currentWord;
@@ -112,24 +127,23 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
     }
 
     endTime = Date.now() - startTime;
-    rl.close();
-    console.log(`\nDictionary attack finished.`);
-    if (found === null) console.log(chalk.red(`✗ Status: NOT FOUND\n✗ Password: Unknown \n✗ Attempts: ${attempts}\n✗ Time: ${endTime}ms`));
-    else console.log(chalk.green(`✓ Status: FOUND\n✓ Password: ${found}\n✓ Attempts: ${attempts}\n✓ Time: ${endTime}ms`));
+    rl.close();  // file reader closed
+    console.log(chalk.blue(`\nINFO: Dictionary attack finished.`));
+
+    if (found === null) spinner.fail(chalk.red(`\n✗ STATUS: NOT FOUND\n✗ Password: Unknown \n✗ Attempts: ${attempts}\n✗ Time: ${endTime}ms`));
+    else spinner.succeed(chalk.green(`\nSTATUS: FOUND\n✓ Password: ${found}\n✓ Attempts: ${attempts}\n✓ Time: ${endTime}ms`));
     return found;
 }
 
 async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attackMethod) {
+    // my router function to start attack
 
-    console.log('Brutal Hash - Dictionary Attack');
-    console.log('='.repeat(50));
-
-    // Logic to not damage PC in case attackMethod is undefined:
-    if (attackMethod === undefined) {
-        if (typeof wordListSource === 'string') {
+    // Logic to not damage PC in case attackMethod is undefined: 
+    if (attackMethod === undefined) {                                
+        if (typeof wordListSource === 'string') {               // is path, not []
             // Stream attack, resource saving
             return await dictionaryAttackStream(targetHash, wordListSource, hashAlgorithm);
-        } else {
+        } else {                                                // is [], not path
             // Memory attack, hard on resource
             return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm);
         }
@@ -144,31 +158,32 @@ async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attac
 
 async function loadDictionaryList() {
     const folderPath = getDictFolder();
-    const spinner = ora('Loading dictionary list...').start();
+    const spinner = ora('STATUS: Loading dictionary list...').start();
     try {
-        const files = await fs.promises.readdir(folderPath);
+        const files = await fs.promises.readdir(folderPath);         // load files
         const result = [];
-        for (const f of files) {
-            const full = path.join(folderPath, f);
+        for (const f of files) {                                     
+            const full = path.join(folderPath, f);                   // -> FULLPATH/file
             try {
                 const stat = await fs.promises.stat(full);
                 if (stat.isFile()) {
                     result.push({ name: f, path: full, size: stat.size });
                 }
             } catch (e) {
-                // skip
+                spinner.fail('ERROR: Problem reading Wordlists folder.');
+                return [];                                          // return empty []
             }
         }
-        spinner.succeed('Dictionary list loaded!');
+        spinner.succeed('STATUS: Dictionary list loaded.');
         return result;
     } catch (err) {
-        spinner.fail('Error reading Wordlists folder');
-        return [];
+        spinner.fail('ERROR:Problem reading Wordlists folder');
+        return [];                                                  // --//--
     }
 }
 
 async function displayList() {
-    const oldResult = await loadDictionaryList();
+    const oldResult = await loadDictionaryList();   // convert tag format from list elements -> string format for display
     let newResult = [];
     for (let i = 0; i < oldResult.length; i++) {
         const newElement = `${i + 1}.  File: ${oldResult[i].name}  Path: ${oldResult[i].path}  Size: ${oldResult[i].size}`
@@ -189,14 +204,14 @@ async function selectDictionaryMenu(restart=false) {
     }
     const dictionaryList = await loadDictionaryList();
     const listLength = dictionaryList.length;
-    const userInputRaw = (await input('\nEnter number: \n')).trim();
+    const userInput = (await input('\nEnter number: \n')).trim();
 
-    if (userInputRaw.toLowerCase() === 'b') {
+    if (userInput.toLowerCase() === 'b') {
         await crackingMenu();
         return null;
     }
 
-    const choiceNum = Number(userInputRaw);
+    const choiceNum = Number(userInput);
     if (isNaN(choiceNum)) {
         console.log(chalk.red('\nERROR: Number must be entered.\n'));
         return await selectDictionaryMenu(true);
@@ -207,14 +222,13 @@ async function selectDictionaryMenu(restart=false) {
         return await selectDictionaryMenu(true);
     }
 
-    const idx = choiceNum - 1;
-    const setFilePath = dictionaryList[idx].path;
-    console.log(chalk.green(`✓ '${dictionaryList[idx].name}' set as active file.`));
+    const id = choiceNum - 1;
+    const setFilePath = dictionaryList[id].path;
+    console.log(chalk.green(`✓ '${dictionaryList[id].name}' set as active file.`));
     return setFilePath;
 } 
 
 async function selectCustomDictionaryMenu() {
-    // Create a new custom dictionary file with user-provided words
     const listOfWords = [];
 
     console.log(dictionaryCustomName);
@@ -223,11 +237,11 @@ async function selectCustomDictionaryMenu() {
         console.log(chalk.red('\nERROR: File name cannot be empty.'));
         return await selectCustomDictionaryMenu();
     }
-    // sanitize filename (basic)
-    userInput = userInput.replace(/[^a-zA-Z0-9_\-]/g, '_') + '.txt';
+
+    userInput = userInput.replace(/[^a-zA-Z0-9_\-]/g, '_') + '.txt';    // regex to turn it into formatable input
 
     console.log(dictionaryCustomTitle);
-    const userInput2 = (await input('\nHow many words to add: \n')).trim();
+    const userInput2 = (await input('\nHow many words to add (in number): \n')).trim();
     if (isNaN(userInput2)) {
         console.log(chalk.red('\nERROR: Number must be entered.\n'));
         return await selectCustomDictionaryMenu();
@@ -248,16 +262,19 @@ async function selectCustomDictionaryMenu() {
     }
 
     const dictDir = getDictFolder();
+
+    // check for existing folder, if deleted make new 
     try {
         await fs.promises.mkdir(dictDir, { recursive: true });
-    } catch (e) {
-        // ignore
+    } catch (err) {
+        console.error(chalk.red('Failed to create directory:'), err.message);
+        throw err; 
     }
-
+    // path.join -> PATH/new_file_name 
     const newPath = path.join(dictDir, userInput);
     try {
         const spinner = ora('Writing file...').start();
-        await fs.promises.writeFile(newPath, listOfWords.join('\n') + '\n', 'utf8');
+        await fs.promises.writeFile(newPath, listOfWords.join('\n') + '\n', 'utf8'); // splits file in rows
         spinner.succeed(chalk.green(`File successfully written to ${newPath}`));
         return newPath;
     } catch (err) {
@@ -387,7 +404,7 @@ function pickAlgorithmMenu(n) {
 
 async function saltingPromp(text) {
 
-    const q = (await input('\nWould you like to add salt before hashing? (y/n): \n')).toLowerCase();
+    const q = (await input('\nWould you like to add salt before hashing? (y - yes / n - no): \n')).toLowerCase();
 
     if (q === 'y') {
         const salt = await input('\nInput salt to add: \n');
@@ -405,7 +422,7 @@ async function saltingPromp(text) {
                 return await getResult(salt,text,q2);
             }
         }
-        return getResult();
+        return await getResult(salt,text);
     } else if (q === 'n') {
         return;
     } else {
@@ -434,43 +451,43 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
 
     if (choiceNum === 1) {
         activeFilePath = await selectDictionaryMenu();
-        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+        await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
     } else if (choiceNum === 2) {
         const customPath = await selectCustomDictionaryMenu();
         if (customPath) {
             activeFilePath = customPath;
         }
-        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+        await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
     } else if (choiceNum === 3) {
         activeAttackMethod = await selectAttackMethodMenu();
-        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+        await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
     } else if (choiceNum === 4) {
         activeHashToCrack = await input('\nEnter hash to crack: \n');
         console.log(chalk.green(`✓ Hash set: ${activeHashToCrack.substring(0, 20)}...`));
-        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+        await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
     } else if (choiceNum === 5) {
         console.log(asciiMenu);
         let inputNumber = await input('\nEnter number: \n');
         inputNumber = inputNumber.trim();
-        if (isNaN(inputNumber) || inputNumber < 1 || inputNumber > 15) {
-            console.log(chalk.red('\nERROR: Number between 1-15 must be entered.\n'));
+        if (isNaN(inputNumber) || inputNumber < 1 || inputNumber > 17) {
+            console.log(chalk.red('\nERROR: Number between 1-17 must be entered.\n'));
         } else {
             activeHashAlgorithm = pickAlgorithmMenu(inputNumber);
             console.log(chalk.green(`✓ '${activeHashAlgorithm}' set as active hash algorithm.`));
         }
-        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+        await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
     } else if (choiceNum === 6) {
         console.log(statusDictionary);
         console.log(`- Hash to dehash: ${activeHashToCrack}`);
         console.log(`- Hash type: ${activeHashAlgorithm}`);
         console.log(`- Wordlist: ${activeFilePath}`);
         if (activeAttackMethod === 'Dictionary_Attack') {
-            console.log(chalk.yellow(`- Attack Method: ${activeAttackMethod} (WARNING: NOT SUGGESTED FOR PC WITH LOW RAM!)`));
+            console.log(`- Attack Method: ${activeAttackMethod} (WARNING: NOT SUGGESTED FOR PC WITH LOW RAM!)`);
         } else {
             console.log(`- Attack Method: ${activeAttackMethod}`);
         }
         console.log(dictionaryListMenuASCIITail);
-        await crackingMenu(restart=false,activeFilePath=activeFilePath,activeAttackMethod=activeAttackMethod,activeHashToCrack=activeHashToCrack,activeHashAlgorithm=activeHashAlgorithm);
+        await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
     } else if (choiceNum === 7) {
         // Validation that all data is entered
         if (!activeFilePath) {
@@ -494,9 +511,8 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
             return;
         }
         
-        console.log('\n='.repeat(50));
-        console.log(chalk.cyan('STATUS: Attack started'));
-        console.log('='.repeat(50));
+        console.log(dictionaryListMenuASCIITail);
+        console.log(chalk.cyan('\nSTATUS: Attack started'));
         console.log('\n');
         
         let wordListSource;
@@ -516,10 +532,7 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
         
         await pressEnterToContinue();
         await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
-    } else {
-        console.log('\nINFO: Exiting the program.\n');
-        //process.exit(0); // TODO - Until the menu is added, stays like this.
-    }
+    };
 }
 
 async function patternRegexHash(restart=false) {
