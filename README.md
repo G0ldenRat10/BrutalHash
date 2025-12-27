@@ -1,6 +1,5 @@
 # BrutalHash
-Node.js toolkit for hash/dehash related CyberSecurity use with 17 different formats,
-it includes dictionary-attack for both low budget PC and stronger specifications + hash format regex checker
+This Node.js toolkit includes: hash/dehash + dictionary attack (stream/classic) + format matching with regex
 
 ![My Image](https://github.com/G0ldenRat10/PrivatePictures/blob/main/Screenshot%20from%202025-12-27%2011-38-20.png?raw=true)
 
