@@ -17,7 +17,6 @@ import {asciiArt,
         patternRegexHashASCII} from './asciiStorage.js'
 import crypto from 'crypto';
 import readline from 'readline';
-
 import { fileURLToPath } from 'url';
 
 // Resolve __dirname in ESM:
@@ -31,11 +30,41 @@ function getDictFolder() {
     return preferred; 
 }
 
+// Setup logs 
+const LOGS_FILE = './logs.json';
+
+// Log functions
+function checkLogs() {
+    if (!fs.existsSync(LOGS_FILE)) {
+        fs.writeFileSync(LOGS_FILE, JSON.stringify({ operations: [] }, null, 2));  // If file does not exist, make one (in case dumbass that uses it deletes it)
+    }
+}
+
+function addLog(dataToAdd) {
+    checkLogs(); // starting check
+    const currentData = JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8'));
+    dataToAdd['id'] = currentData['operations'].length + 1;
+    dataToAdd['timestamp'] = new Date().toISOString();
+    currentData['operations'].push(dataToAdd);
+
+    if (currentData['operations'].length > 500) {
+        currentData['operations'] =  currentData['operations'].slice(-500); // keep last 500 added Datas
+    }
+
+    fs.writeFileSync(LOGS_FILE,JSON.stringify(currentData, null, 2)); // write edited current data, to file
+}
+// TO-DO: Might implement text based, in terminal reader of logs 
+function getLogs(slicesToReturn=10) {
+    checkLogs(); // starting check
+    const currentData = JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8'));
+    return currentData['operations'].slice(-slicesToReturn);
+}
+
 // Functions:
 
 function restartProgram() {
     // Signal run.sh to restart (exit code 42) instead of looping recursively
-    process.exit(42);
+    process.exit(42); // 42-silent restart
 }
 
 function input(question) {
@@ -57,7 +86,7 @@ function generateHash(text,type) {
     return crypto.createHash(type).update(text).digest('hex');
 }
 
-async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm) {
+async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm, wordlistPath=null) {
     // Algorithm:
     // words --> RAM --> iterate 
     // words = [] (already stored in RAM)
@@ -79,6 +108,7 @@ async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm) {
             const endTime = Date.now() - startTime;
             console.log(`\nDictionary attack finished.`)
             console.log(chalk.green(`✓ Status: FOUND\n✓ Password: ${currentWord}\n✓ Attempts: ${attempts}\n✓ Time: ${endTime}ms`));
+            addLog({type:'crack',algorithm:hashAlgorithm,hash:targetHash,result:'found',cracked:currentWord,wordlist_path:wordlistPath,attempts:attempts});
             return currentWord;
         }
 
@@ -89,6 +119,7 @@ async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm) {
     const endTime = Date.now() - startTime;
     console.log(`\nDictionary attack finished.`);
     console.log(chalk.red(`✗ Status: NOT FOUND\n✗ Password: Unknown \n✗ Attempts: ${attempts}\n✗ Time: ${endTime}ms`));
+    addLog({type:'crack',algorithm:hashAlgorithm,hash:targetHash,result:'not_found',cracked:null,wordlist_path:wordlistPath,attempts:attempts});
 }
 
 async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
@@ -135,12 +166,18 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
     rl.close();  // file reader closed
     console.log(chalk.blue(`\nINFO: Dictionary attack finished.`));
 
-    if (found === null) spinner.fail(chalk.red(`\n✗ STATUS: NOT FOUND\n✗ Password: Unknown \n✗ Attempts: ${attempts}\n✗ Time: ${endTime}ms`));
-    else spinner.succeed(chalk.green(`\nSTATUS: FOUND\n✓ Password: ${found}\n✓ Attempts: ${attempts}\n✓ Time: ${endTime}ms`));
-    return found;
+    if (found === null) {
+        spinner.fail(chalk.red(`\n✗ STATUS: NOT FOUND\n✗ Password: Unknown \n✗ Attempts: ${attempts}\n✗ Time: ${endTime}ms`));
+        addLog({type:'crack',algorithm:hashAlgorithm,hash:targetHash,result:'not_found',cracked:null,wordlist_path:filePath,attempts:attempts});
+    } 
+    else {
+        spinner.succeed(chalk.green(`\nSTATUS: FOUND\n✓ Password: ${found}\n✓ Attempts: ${attempts}\n✓ Time: ${endTime}ms`));
+        addLog({type:'crack',algorithm:hashAlgorithm,hash:targetHash,result:'found',cracked:found,wordlist_path:filePath,attempts:attempts});
+        return found;
+    }
 }
 
-async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attackMethod) {
+async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attackMethod, wordlistPath=null) {
     // my router function to start attack
 
     // Logic to not damage PC in case attackMethod is undefined: 
@@ -150,11 +187,11 @@ async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attac
             return await dictionaryAttackStream(targetHash, wordListSource, hashAlgorithm);
         } else {                                                // is [], not path
             // Memory attack, hard on resource
-            return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm);
+            return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm, wordlistPath);
         }
     // If attackMethod is picked:
     } else if (attackMethod === 'Dictionary_Attack') {
-        return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm);
+        return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm, wordlistPath);
     } else if (attackMethod === 'Stream_Attack') {
         return dictionaryAttackStream(targetHash,wordListSource,hashAlgorithm);
     }
@@ -361,6 +398,7 @@ async function hashMenu(restart=false) {
         restartProgram();
     }
     const choiceNum = Number(algChoice);
+
     if (isNaN(choiceNum)) {
         console.log(chalk.red('\nERROR: Number must be entered.'));
         await hashMenu(true);
@@ -368,6 +406,7 @@ async function hashMenu(restart=false) {
         console.log(chalk.red('\nERROR: Number between 1-17 must be entered.'));
         await hashMenu(true);
     }
+
     const type = dictHashes[algChoice];
 
     const text = await input('\nEnter word of choice: \n');
@@ -376,11 +415,13 @@ async function hashMenu(restart=false) {
         const result = generateHash(text,type);
         console.log(`Result in ${type} format:\n`)
         console.log(chalk.yellow(result));
+        addLog({type:'hash', algorithm:type, input:text, output:result, salt:undefined});
         await restartHashMenu();
     } else {
         const result = generateHash(saltedText,type);
         console.log(`Result in ${type} format + added salt:\n`)
         console.log(chalk.yellow(result));
+        addLog({type:'hash', algorithm:type, input:text, output:result, salt:saltedText});
         await restartHashMenu();
     }
 }
@@ -534,7 +575,7 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
             wordListSource = activeFilePath;
         }
         
-        await dictionaryAttack(activeHashToCrack, wordListSource, activeHashAlgorithm);
+        await dictionaryAttack(activeHashToCrack, wordListSource, activeHashAlgorithm, activeAttackMethod, activeFilePath);
         
         await pressEnterToContinue();
         await crackingMenu(restart=false,activeFilePath,activeAttackMethod,activeHashToCrack,activeHashAlgorithm);
