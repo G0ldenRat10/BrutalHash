@@ -3,7 +3,7 @@ This Node.js toolkit includes: hash/dehash (with salting) + dictionary attack (s
 
 ![My Image](https://github.com/G0ldenRat10/PrivatePictures/blob/main/Screenshot%20from%202025-12-27%2011-38-20.png?raw=true)
 
-## Youtube Tutorial: [My Video](https://www.youtube.com/watch?v=qUqQG65M328)
+## Youtube Tutorial: [LINK](https://www.youtube.com/watch?v=qUqQG65M328)
 
 ## Features
 - **Hash Generation**: Support for 17 hash algorithms (MD5, SHA-1, SHA-2, SHA-3, BLAKE2, RIPEMD-160, WHIRLPOOL...)
