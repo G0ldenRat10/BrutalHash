@@ -25,7 +25,7 @@ else
   echo "STATUS: NVM already installed."
 fi
 
-# Load NVM
+# Load NVM here
 export NVM_DIR="$HOME/.nvm"
 if [ -s "$NVM_DIR/nvm.sh" ]; then
   . "$NVM_DIR/nvm.sh"
