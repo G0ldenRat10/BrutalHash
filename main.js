@@ -33,6 +33,11 @@ function getDictFolder() {
 
 // Functions:
 
+function restartProgram() {
+    // Signal run.sh to restart (exit code 42) instead of looping recursively
+    process.exit(42);
+}
+
 function input(question) {
     const rl = readline.createInterface({    // interface readline
     input: process.stdin,
@@ -207,7 +212,7 @@ async function selectDictionaryMenu(restart=false) {
     const userInput = (await input('\nEnter number: \n')).trim();
 
     if (userInput.toLowerCase() === 'b') {
-        await crackingMenu();
+        restartProgram();
         return null;
     }
 
@@ -274,7 +279,7 @@ async function selectCustomDictionaryMenu() {
     const newPath = path.join(dictDir, userInput);
     try {
         const spinner = ora('Writing file...').start();
-        await fs.promises.writeFile(newPath, listOfWords.join('\n') + '\n', 'utf8'); // splits file in rows
+        await fs.promises.writeFile(newPath, listOfWords.join('\n') + '\n', 'utf8'); // split file in rows
         spinner.succeed(chalk.green(`File successfully written to ${newPath}`));
         return newPath;
     } catch (err) {
@@ -290,7 +295,7 @@ async function selectAttackMethodMenu(restart=false) {
     const userInputRaw = (await input('\nEnter number: \n')).trim();
 
     if (userInputRaw.toLowerCase() === 'b') {
-        await crackingMenu();
+        restartProgram();
         return undefined;
     }
 
@@ -317,15 +322,16 @@ async function selectAttackMethodMenu(restart=false) {
 async function hashMenu(restart=false) {
 
     async function restartHashMenu() {
-    const restartQ = await input(`\n'b' - return to Hash Menu , 'q' - return to Main Menu : \n`)
-    if (restartQ.toLowerCase() != 'b' && restartQ.toLowerCase() != 'q') {
-        console.log(chalk.red('ERROR: Enter valid choice.'));
-        await restartHashMenu();
-    } else if (restartQ.toLowerCase() === 'q') {
-        await mainMenu();
-    } else {
-        await hashMenu();
-    }}
+        const restartQ = await input(`\n'b' - return to Hash Menu , 'q' - return to Main Menu : \n`)
+        if (restartQ.toLowerCase() != 'b' && restartQ.toLowerCase() != 'q') {
+            console.log(chalk.red('ERROR: Enter valid choice.'));
+            await restartHashMenu();
+        } else if (restartQ.toLowerCase() === 'q') {
+            restartProgram();
+        } else {
+            await hashMenu();
+        }
+    }
 
     const dictHashes = {
     1:'md5',
@@ -352,7 +358,7 @@ async function hashMenu(restart=false) {
     const algChoice = await input('\nEnter number: \n');
 
     if (algChoice.toLowerCase() === 'b') {
-        await mainMenu();
+        restartProgram();
     }
     const choiceNum = Number(algChoice);
     if (isNaN(choiceNum)) {
@@ -438,7 +444,7 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
     }
     let choiceNum = await input('\nEnter number: \n');
     if (choiceNum === 'b' || choiceNum === 'B') {
-        await mainMenu();
+        restartProgram();
     } else if (isNaN(choiceNum)) {
         console.log(chalk.red('\nERROR: Number must be entered.\n'));
         await crackingMenu(true);
@@ -537,6 +543,8 @@ async function crackingMenu(restart=false,activeFilePath,activeAttackMethod,acti
 
 async function patternRegexHash(restart=false) {
 
+    // Built in functions: 
+
     function isValidHash(hash,regex) {
         return regex.test(hash);
     }
@@ -546,60 +554,132 @@ async function patternRegexHash(restart=false) {
         if (userInput.toLowerCase() === 'r') {
             await patternRegexHash(true);
         } else if (userInput.toLowerCase() === 'q') {
-            await mainMenu();
+            restartProgram();
         } else {
             console.log(chalk.red('\nERROR: Invalid option.\n'))
             await userInputIsItValid();
         }
     }
 
+
+    // 1. test 
+    async function detectEncoding(inputHash) {
+        const encodings = { 
+            'hex': /^[a-fA-F0-9]+$/,                                                         // encoding
+            'base64': /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/,    // encoding
+            'bcrypt': /^\$2[aby]\$\d{2}\$.{53}$/,                                            // algorithm for pw, purposly slow, salt built in (TO-DO will work on this in future)
+            'argon2': /^\$argon2(id|i|d)\$/                                                  // uses base64 for hash and salting, GPU resistant (TO-DO will see options in the future)
+        };
+        for (const enc in encodings) {   //for each key in dict
+            if (encodings[enc].test(inputHash)) return enc;  // test regex -> return encoding type
+        }
+        // else
+        return 'unknown';
+    }
+    // 2. test 
+    // Shannon entropy -> finding poisition frequency -> more random, less repeating -> high ration entrophy -> better probability of HASH organization 
+    async function calculateEntropy(inputHash) {
+        const frequency = {};                  // Empty object to save char
+        for (const char of inputHash) {        // for each char in input string
+            frequency[char] = (frequency[char] || 0) + 1;  // if undefined(empty) --> f[c] = 0 --> 0 + 1 // if n --> f[c] = n + 1
+        }
+        const numbersFrequency =  Object.values(frequency);
+        // Formula:
+        // H = − Σ p(x) log₂ p(x)
+        const entropy = numbersFrequency.reduce((acc,cur) => acc - (cur/inputHash.length) * Math.log2(cur/inputHash.length), 0);   // cur/lenght ==> probability 
+        return entropy.toFixed(2);
+    }
+    async function filterEntropy(entropy, encoding) {
+        let standard = 0; // set standard to check
+        if (encoding === 'hex') {
+            standard = 3.5;
+        } else if (encoding === 'base64' || encoding === 'argon2') {
+            standard = 5.5;
+        } else {
+            standard = 5.0; // bcrypt
+        }
+        if (entropy >= standard) return `\nINFO: High entropy detected: ${entropy}, likely a hash.\n`;
+        else return `\nINFO: Low entropy detected: ${entropy}, likely not a hash.\n`;
+    }
+    // 3. test (if Hex)
+    async function detectHex(inputHash) {
+            const regexAndHash = {
+                'md5': /^[a-fA-F0-9]{32}$/,                      // 32 HEX
+                'md5-sha1': /^[a-fA-F0-9]{32}[a-fA-F0-9]{40}$/,  // 32+40=72 HEX --> (md5:32)+(sha1:40)
+                'sha1': /^[a-fA-F0-9]{40}$/,                     // 40 HEX
+                'sha224': /^[a-fA-F0-9]{56}$/,                   // 56 HEX
+                'sha256': /^[a-fA-F0-9]{64}$/,                   // 64 HEX
+                'sha384': /^[a-fA-F0-9]{96}$/,                   // 96 HEX
+                'sha512': /^[a-fA-F0-9]{128}$/,                  // 128 HEX
+                'sha3-224': /^[a-fA-F0-9]{56}$/,                 // 56 HEX
+                'sha3-256': /^[a-fA-F0-9]{64}$/,                 // 64 HEX
+                'sha3-384': /^[a-fA-F0-9]{96}$/,                 // 96 HEX
+                'sha3-512': /^[a-fA-F0-9]{128}$/,                // 128 HEX
+                'blake2s256': /^[a-fA-F0-9]{64}$/,               // 64 HEX
+                'blake2b512': /^[a-fA-F0-9]{128}$/,              // 128 HEX
+                'ripemd160': /^[a-fA-F0-9]{40}$/,                // 40 HEX - Bitcoin algorithm, simillar to SHA1
+                'shake128': /^[a-fA-F0-9]{32}$/,                 // Depends - likely 32 hex - XOF Function
+                'shake256': /^[a-fA-F0-9]{64}$/,                 // Depends - likely 64 hex 
+                'sm3': /^[a-fA-F0-9]{64}$/                       // 64 HEX- Chinese SHA256
+            };
+
+        let capturePotentialHashesList = [];
+
+        console.log(chalk.yellow(`\nSTATUS: Looking for potential matches...\n`));
+        for (let key in regexAndHash) {
+            let hashName = key;
+            let regex = regexAndHash[key];
+            if (isValidHash(inputHash,regex)) {
+                capturePotentialHashesList.push(hashName);
+            } 
+        }
+        
+        if (capturePotentialHashesList.length > 0) {
+            console.log(chalk.green('\nINFO: Success\n'));
+            console.log(chalk.yellow(`\nPotential HASH ALGORITHMS for: ${inputHash}\n`));
+            for (let i = 0; i < capturePotentialHashesList.length; i++) {
+                console.log(chalk.yellow(`${i + 1}. ${capturePotentialHashesList[i]}`));
+            }
+            await userInputIsItValid();
+        } else {
+            console.log(chalk.red('\nINFO: No specific algorithm found for this input.\n'));
+            await userInputIsItValid();
+        }
+    }
+
+    // Main part:
     if (restart === false) {
         console.log(patternRegexHashASCII);
     }
-    let inputHash = await input(`\nEnter hash: \n`);
-
-    const regexAndHash = {
-        'md5': /^[a-fA-F0-9]{32}$/,                      // 32 HEX
-        'md5-sha1': /^[a-fA-F0-9]{32}[a-fA-F0-9]{40}$/,  // 32+40=72 HEX --> (md5:32)+(sha1:40)
-        'sha1': /^[a-fA-F0-9]{40}$/,                     // 40 HEX
-        'sha224': /^[a-fA-F0-9]{56}$/,                   // 56 HEX
-        'sha256': /^[a-fA-F0-9]{64}$/,                   // 64 HEX
-        'sha384': /^[a-fA-F0-9]{96}$/,                   // 96 HEX
-        'sha512': /^[a-fA-F0-9]{128}$/,                  // 128 HEX
-        'sha3-224': /^[a-fA-F0-9]{56}$/,                 // 56 HEX
-        'sha3-256': /^[a-fA-F0-9]{64}$/,                 // 64 HEX
-        'sha3-384': /^[a-fA-F0-9]{96}$/,                 // 96 HEX
-        'sha3-512': /^[a-fA-F0-9]{128}$/,                // 128 HEX
-        'blake2s256': /^[a-fA-F0-9]{64}$/,               // 64 HEX
-        'blake2b512': /^[a-fA-F0-9]{128}$/,              // 128 HEX
-        'ripemd160': /^[a-fA-F0-9]{40}$/,                // 40 HEX - Bitcoin algorithm, simillar to SHA1
-        'shake128': /^[a-fA-F0-9]{32}$/,                 // Depends - likely 32 hex - XOF Function
-        'shake256': /^[a-fA-F0-9]{64}$/,                 // Depends - likely 64 hex 
-        'sm3': /^[a-fA-F0-9]{64}$/                       // 64 HEX- Chinese SHA256
+    // 1: Check encoding regex and display:
+    const inputHash = await input(`\nEnter hash: `);
+    const encoding = await detectEncoding(inputHash);
+    console.log(chalk.yellow(`\nINFO: Detected encoding: ${encoding}`));
+    // 2: Check entropy result and display:
+    const entropy = await calculateEntropy(inputHash);
+    console.log(chalk.yellow(await filterEntropy(entropy, encoding)));
+    // 3: Test Regex with switch/case to declare what encoding--> if hex: type --> if base64: calculate immidiatly --> else: give info and exit
+    switch (encoding) {
+        case 'hex':
+        await detectHex(inputHash);
+        break;
+        case 'base64':
+            const decoded = Buffer.from(inputHash,'base64').toString('utf8');
+            console.log(chalk.yellow(`INFO: Your Base64 encode in clear-text is: ${decoded}`));
+            await userInputIsItValid();
+        break;
+        case 'bcrypt':
+            console.log(chalk.yellow(`INFO: Bycript is one way operation, you can not get original password.`));
+            await userInputIsItValid();
+        break;
+        case 'argon2':
+            console.log(chalk.yellow(`INFO: Argon2 is one way operation, you can not get original password.`));
+            await userInputIsItValid();
+        break;
+        default:
+            // since encoding is 'unknown' in this case
+            await userInputIsItValid();
     };
-
-    let capturePotentialHashesList = [];
-
-    console.log(chalk.yellow(`\nLooking for potential matches...\n`));
-    for (let key in regexAndHash) {
-        let hashName = key;
-        let regex = regexAndHash[key];
-        if (isValidHash(inputHash,regex)) {
-            capturePotentialHashesList.push(hashName);
-        } 
-    }
-    
-    if (capturePotentialHashesList.length > 0) {
-        console.log(chalk.green('\nINFO: Success\n'));
-        console.log(chalk.yellow(`\nPotential HASH ALGORITHMS for: ${inputHash}\n`));
-        for (let i = 0; i < capturePotentialHashesList.length; i++) {
-            console.log(chalk.yellow(`${i + 1}. ${capturePotentialHashesList[i]}`));
-        }
-        await userInputIsItValid();
-    } else {
-        console.log(chalk.red('\nINFO: No specific algorithm found for this input.\n'));
-        await userInputIsItValid();
-    }
 }
 
 async function mainMenu(restart=false) {
