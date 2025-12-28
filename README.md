@@ -39,6 +39,15 @@ If you do not have Node.js with version 20.0.0, pick one of the options:
    	chmod +x install_node_20.sh
    	./install_node_20.sh
    	```
+	**IMPORTANT:** After installation, you must reload your shell configuration:
+	```bash
+	source ~/.bashrc    # for bash users
+	source ~/.zshrc     # for zsh users
+	```
+	Or simply close and reopen your terminal, then verify with:
+	```bash
+	node -v    # should show v20.x.x
+	```
 
 ### Install Dependencies
 After Node.js is installed, install npm dependencies (built-in installer will do it for you):
