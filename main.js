@@ -21,12 +21,12 @@ import { fileURLToPath } from 'url';
 
 // Resolve __dirname in ESM:
 
-const __filename = fileURLToPath(import.meta.url); // is -> ../BrutalHash/main.js 
-const __dirname = path.dirname(__filename); // Turn to DIRECTORY that is step above /BrutalHash
+const __filename = fileURLToPath(import.meta.url); // -> ../BrutalHash/main.js 
+const __dirname = path.dirname(__filename); // Turn to DIRECTORY name that is step above /BrutalHash
 
 function getDictFolder() {
     const preferred = path.join(__dirname, 'Wordlists'); // /BrutalHash/Wordlists check -> ?
-    if (fs.existsSync(preferred) && fs.statSync(preferred).isDirectory()) return preferred;  // turn back even if it exists
+    if (fs.existsSync(preferred) && fs.statSync(preferred).isDirectory()) return preferred;  // turn back  if it exists
     return preferred; 
 }
 
@@ -53,18 +53,19 @@ function addLog(dataToAdd) {
 
     fs.writeFileSync(LOGS_FILE,JSON.stringify(currentData, null, 2)); // write edited current data, to file
 }
-// TO-DO: Might implement text based, in terminal reader of logs 
+// TO-DO: might implement text based, in terminal reader of logs as option 4? i think
+// curently inactive function
 function getLogs(slicesToReturn=10) {
     checkLogs(); // starting check
     const currentData = JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8'));
     return currentData['operations'].slice(-slicesToReturn);
 }
 
-// Functions:
+// Program logic functions:
 
 function restartProgram() {
     // Signal run.sh to restart (exit code 42) instead of looping recursively
-    process.exit(42); // 42-silent restart
+    process.exit(42); // 42 my code for silent restart
 }
 
 function input(question) {
@@ -72,7 +73,7 @@ function input(question) {
     input: process.stdin,
     output: process.stdout
     });
-    return new Promise(resolve => rl.question(question, ans => {   // wraps promise --> rl.question is callback based question: '' , ans: user input
+    return new Promise(resolve => rl.question(question, ans => {   // promise wraper --> rl.question is callback based question: '' , ans: user input
         rl.close();
         resolve(ans);
     }));
@@ -112,10 +113,11 @@ async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm, wor
             return currentWord;
         }
 
-        if (attempts % 20000 === 0) {
+        if (attempts % 10000 === 0) {
             console.log(chalk.blue(`◆ Currently at: ${attempts} attempts`));
         }
     }
+    // In case not found:
     const endTime = Date.now() - startTime;
     console.log(`\nDictionary attack finished.`);
     console.log(chalk.red(`✗ Status: NOT FOUND\n✗ Password: Unknown \n✗ Attempts: ${attempts}\n✗ Time: ${endTime}ms`));
@@ -132,14 +134,14 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
 
     const fileStream = fs.createReadStream(filePath);   // reads in chunks
 
-    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity  });  // chunk to lines with readline
+    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity  });  // chunk to lines with readline , crlfDelay: \n \r registered as newline
 
-    // start variables set:
+    // variable setters:
     let attempts = 0;     
     let found = null;
     let endTime = null;
 
-    for await (const line of rl) {  // asinhron iterate
+    for await (const line of rl) {  // asinhron iterate, realine on stream -> awaits data of every line one by one without RAM consumption...
         const tokens = line.split(/\s+/); // in case words not devided by rows, but by space,tab,\n, take regex to trim it down to format i need
         for (const token of tokens) {
             const currentWord = token.trim();
@@ -148,7 +150,7 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
             attempts++;
             const testHash = generateHash(currentWord, hashAlgorithm);  // call -> generateHash() -> return result
 
-            // Updating spinner every 20,000 attempts
+            // Updating spinner every 10,000 attempts
             if (attempts % 10000 === 0) {
                 const timePassed = Date.now() - startTime;
                 spinner.text = chalk.yellow(`Attempts: ${attempts} | Time: ${timePassed} ms\n`);
@@ -186,7 +188,7 @@ async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attac
             // Stream attack, resource saving
             return await dictionaryAttackStream(targetHash, wordListSource, hashAlgorithm);
         } else {                                                // is [], not path
-            // Memory attack, hard on resource
+            // Memory (classic) attack, hard on resource
             return dictionaryAttackInMemory(targetHash, wordListSource, hashAlgorithm, wordlistPath);
         }
     // If attackMethod is picked:
@@ -608,8 +610,8 @@ async function patternRegexHash(restart=false) {
         const encodings = { 
             'hex': /^[a-fA-F0-9]+$/,                                                         // encoding
             'base64': /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/,    // encoding
-            'bcrypt': /^\$2[aby]\$\d{2}\$.{53}$/,                                            // algorithm for pw, purposly slow, salt built in (TO-DO will work on this in future)
-            'argon2': /^\$argon2(id|i|d)\$/                                                  // uses base64 for hash and salting, GPU resistant (TO-DO will see options in the future)
+            'bcrypt': /^\$2[aby]\$\d{2}\$.{53}$/,                                            // algorithm for pw, purposly slow, salt built in (TO-DO will see options in future)
+            'argon2': /^\$argon2(id|i|d)\$/                                                  // uses base64 for hash and salting, GPU resistant (TO-DO will see options in future)
         };
         for (const enc in encodings) {   //for each key in dict
             if (encodings[enc].test(inputHash)) return enc;  // test regex -> return encoding type
@@ -624,9 +626,12 @@ async function patternRegexHash(restart=false) {
         for (const char of inputHash) {        // for each char in input string
             frequency[char] = (frequency[char] || 0) + 1;  // if undefined(empty) --> f[c] = 0 --> 0 + 1 // if n --> f[c] = n + 1
         }
-        const numbersFrequency =  Object.values(frequency);
+        const numbersFrequency =  Object.values(frequency); // get values from object
         // Formula:
-        // H = − Σ p(x) log₂ p(x)
+        // H = − Σ p(x) log₂ p(x)  --> result is weighted information for specific outcome
+        // p(x) - how likely the outcome
+        // log2p(x) - how much information it provides
+        // Σ - reduce() --> sum  ; - - => + , the reason of negation before SUM is to end up with positive
         const entropy = numbersFrequency.reduce((acc,cur) => acc - (cur/inputHash.length) * Math.log2(cur/inputHash.length), 0);   // cur/lenght ==> probability 
         return entropy.toFixed(2);
     }
