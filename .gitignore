@@ -4,7 +4,13 @@ node_modules/
 # Logs
 *.log
 npm-debug.log*
+logs.json
 
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Claude
+.claude/
+ANALIZA.md
+IZVESTAJ.md
