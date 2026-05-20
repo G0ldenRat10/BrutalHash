@@ -14,3 +14,12 @@ Thumbs.db
 .claude/
 ANALIZA.md
 IZVESTAJ.md
+
+# Presentations (Claude generated)
+*.pptx
+*.odp
+
+# Generated wordlists (output of Sort/Filter feature)
+Wordlists/*_sorted_*.txt
+Wordlists/*_prefix_*.txt
+Wordlists/*_suffix_*.txt

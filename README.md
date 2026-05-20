@@ -58,21 +58,15 @@ npm install
 ```
 
 ## Running BrutalHash
-First time only (make the runner executable before starting):
 
-```bash
-chmod +x run.sh
-```
-
-Then start the program via npm (this calls run.sh under the hood):
+Start the program via npm:
 
 ```bash
 npm start
 ```
 
 ### Platform notes
-- Linux/macOS: works out of the box (uses bash to run run.sh).
-- Windows: run from Git Bash or WSL for the same behavior. If you prefer plain Command Prompt/PowerShell, change the npm start script to `node main.js` (loses the auto-restart behavior from run.sh).
+- Works out of the box on Linux, macOS, and Windows (no shell-specific dependencies).
 
 ## Usage
 

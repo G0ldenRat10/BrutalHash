@@ -15,6 +15,32 @@ import { crackingMenuASCII,
          asciiMenu } from '../ui/ascii.js'
 import { input, pressEnterToContinue } from '../core/input.js'
 import { dictionaryAttack } from '../core/attack.js'
+import { mergeSort } from '../algorithms/mergeSort.js'
+
+// Komparatori za sortiranje wordliste:
+
+// Prefix mod: standardno alfabetsko poredjenje (znak po znak)
+const STRING_COMPARE_PREFIX = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+
+// Helper za obrtanje stringa
+function reverseStr(s) {
+    return [...s].reverse().join('');
+}
+
+// Suffix mod: poredi obrnute stringove -> grupise reci po kraju
+const STRING_COMPARE_SUFFIX = (a, b) => {
+    const ra = reverseStr(a);
+    const rb = reverseStr(b);
+    return ra < rb ? -1 : ra > rb ? 1 : 0;
+};
+
+// Ascending mod: prirodno alfanumericki ('pass2' < 'pass10')
+const STRING_COMPARE_ASCENDING = (a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+// Descending mod: isto sto i ascending, samo obrnuto (zamenjeni argumenti)
+const STRING_COMPARE_DESCENDING = (a, b) =>
+    b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' });
 
 // Resolve __dirname in ESM:
 
@@ -205,6 +231,105 @@ function pickAlgorithmMenu(n) {
     return dictHashes[n];
 }
 
+async function sortDictionaryFile(direction, filterValue = null) {
+    // 1. Odaberi IZVORNU wordlistu
+    console.log(chalk.cyan('\nINFO: Select source wordlist to sort.\n'));
+    const sourcePath = await selectDictionaryMenu();
+    if (!sourcePath) {
+        console.log(chalk.yellow('INFO: Cancelled.'));
+        return null;
+    }
+
+    // 2. Ucitaj reci
+    const spinner = ora('Reading source file...').start();
+    let content;
+    try {
+        content = await fs.promises.readFile(sourcePath, 'utf8');
+    } catch (err) {
+        spinner.fail(chalk.red(`ERROR: Cannot read ${sourcePath}`));
+        return null;
+    }
+    const words = content.split('\n').map(w => w.trim()).filter(Boolean);
+    spinner.succeed(`Loaded ${words.length} words`);
+
+    // 3. (OPCIONO) Filter za prefix/suffix mode kad korisnik unese vrednost
+    let toSort = words;
+    if (filterValue) {
+        if (direction === 'prefix') {
+            toSort = words.filter(w => w.startsWith(filterValue));
+        } else if (direction === 'suffix') {
+            toSort = words.filter(w => w.endsWith(filterValue));
+        }
+        console.log(chalk.cyan(`Filter "${filterValue}" matched ${toSort.length} of ${words.length} words`));
+        if (toSort.length === 0) {
+            console.log(chalk.red('ERROR: No words match the filter. Nothing to write.'));
+            return null;
+        }
+    }
+
+    // 4. MERGE SORT - bira komparator po direction-u
+    const spinner2 = ora(`Sorting (merge sort, direction=${direction})...`).start();
+    let compare;
+    if      (direction === 'suffix')     compare = STRING_COMPARE_SUFFIX;
+    else if (direction === 'ascending')  compare = STRING_COMPARE_ASCENDING;
+    else if (direction === 'descending') compare = STRING_COMPARE_DESCENDING;
+    else                                 compare = STRING_COMPARE_PREFIX;
+    const sorted = mergeSort(toSort, compare);
+    spinner2.succeed(`Sorted ${sorted.length} words by ${direction}`);
+
+    // 5. Snimi novi fajl (ime sadrzi filter vrednost ako postoji)
+    const parsed = path.parse(sourcePath);
+    const safeVal = filterValue ? filterValue.replace(/[^a-zA-Z0-9_\-]/g, '_') : null;
+    const tag = filterValue ? `${direction}_${safeVal}` : `sorted_${direction}`;
+    const newName = `${parsed.name}_${tag}${parsed.ext || '.txt'}`;
+    const newPath = path.join(parsed.dir, newName);
+
+    const spinner3 = ora(`Writing ${newName}...`).start();
+    try {
+        await fs.promises.writeFile(newPath, sorted.join('\n') + '\n', 'utf8');
+        spinner3.succeed(chalk.green(`✓ New wordlist created: ${newPath}`));
+        return newPath;
+    } catch (err) {
+        spinner3.fail(chalk.red(`ERROR: ${err.message}`));
+        return null;
+    }
+}
+
+async function customWordlistSubmenu() {
+    console.log(`
+┌─ Make Custom Wordlist ────────────────────────┐
+│ 1. Manual entry         - Type words yourself │
+│ 2. Filter: prefix       - Words starting with │
+│ 3. Filter: suffix       - Words ending with   │
+│ 4. Sort: ascending      - Whole wordlist      │
+│ 5. Sort: descending     - Whole wordlist      │
+│ b. cancel                                     │
+└───────────────────────────────────────────────┘`);
+    const choice = (await input('\nEnter number: \n')).trim();
+    if (choice.toLowerCase() === 'b') return null;
+    const num = Number(choice);
+    if (isNaN(num) || num < 1 || num > 5) {
+        console.log(chalk.red('\nERROR: Number between 1-5 must be entered.\n'));
+        return await customWordlistSubmenu();
+    }
+    if (num === 1) return await selectCustomDictionaryMenu();    // manuelni unos
+
+    // Filter modovi - trazimo unos od korisnika
+    if (num === 2 || num === 3) {
+        const direction = num === 2 ? 'prefix' : 'suffix';
+        const value = (await input(`\nEnter ${direction} string (words that ${direction === 'prefix' ? 'start' : 'end'} with): \n`)).trim();
+        if (!value) {
+            console.log(chalk.red('\nERROR: Value cannot be empty.\n'));
+            return await customWordlistSubmenu();
+        }
+        return await sortDictionaryFile(direction, value);
+    }
+
+    // Pure sort modovi - bez unosa, cela wordlista
+    const directions = { 4: 'ascending', 5: 'descending' };
+    return await sortDictionaryFile(directions[num]);
+}
+
 async function crackingMenu(justEntered, session) {
     console.log(crackingMenuASCII);            // uvek - meni opcija mora da se vidi posle svake akcije
     let choiceNum = await input('\nEnter number: \n');
@@ -225,7 +350,7 @@ async function crackingMenu(justEntered, session) {
         if (selected) session.activeFilePath = selected;         // null (otkazano) -> ne diraj
         return { type: 'stay' };
     } else if (choiceNum === 2) {
-        const customPath = await selectCustomDictionaryMenu();
+        const customPath = await customWordlistSubmenu();        // podmeni: manual ili sort
         if (customPath) {
             session.activeFilePath = customPath;
         }
