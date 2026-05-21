@@ -48,10 +48,11 @@ async function patternRegexHash(justEntered) {
         const numbersFrequency =  Object.values(frequency); // get values from object
         // Formula:
         // H = − Σ p(x) log₂ p(x)  --> result is weighted information for specific outcome
-        // p(x) - how likely the outcome
+        // p(x) - how likely the outcome , p(x)= frequency/lenght
         // log2p(x) - how much information it provides
         // Σ - reduce() --> sum  ; - - => + , the reason of negation before SUM is to end up with positive
-        const entropy = numbersFrequency.reduce((acc,cur) => acc - (cur/inputHash.length) * Math.log2(cur/inputHash.length), 0);   // cur/lenght ==> probability
+        // cur/lenght ==> probability = p(x)
+        const entropy = numbersFrequency.reduce((acc,cur) => acc - (cur/inputHash.length) * Math.log2(cur/inputHash.length), 0); 
         return entropy.toFixed(2);
     }
     async function filterEntropy(entropy, encoding) {
@@ -112,16 +113,16 @@ async function patternRegexHash(justEntered) {
         }
     }
 
-    // Main part:
+    // mejn part:
     console.log(patternRegexHashASCII);        // uvek - prikazi baner pri svakom prolazu
-    // 1: Check encoding regex and display:
+    // 1: check encoding regex and display:
     const inputHash = await input(`\nEnter hash: `);
     const encoding = await detectEncoding(inputHash);
     console.log(chalk.yellow(`\nINFO: Detected encoding: ${encoding}`));
-    // 2: Check entropy result and display:
+    // 2: check entropy result and display:
     const entropy = await calculateEntropy(inputHash);
     console.log(chalk.yellow(await filterEntropy(entropy, encoding)));
-    // 3: Test Regex with switch/case to declare what encoding--> if hex: type --> if base64: calculate immidiatly --> else: give info and exit
+    // 3: test Regex with switch/case to declare what encoding--> if hex: type --> if base64: calculate immidiatly --> else: give info and exit
     switch (encoding) {
         case 'hex':
             return await detectHex(inputHash);

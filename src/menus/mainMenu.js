@@ -12,7 +12,7 @@ async function mainMenu(justEntered) {
 
     if (isNaN(choiceNum)) {
         console.log(chalk.red('\nERROR: Number must be entered.\n'));
-        return { type: 'stay' };  // umesto rekurzivnog pozivanja, vraca type:stay
+        return { type: 'stay' };  // umesto rekurzivnog pozivanja, vraca type:stay , pre mi je bilo menu nesto.. = false
     }
     if (choiceNum < 1 || choiceNum > 4) {
         console.log(chalk.red('\nERROR: Number between 1-4 must be entered.\n'));

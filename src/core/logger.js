@@ -4,9 +4,10 @@ import fs from 'fs';
 const LOGS_FILE = './logs.json';
 
 // Log functions
+// napravi fajl ako ne postoji (u slucaju da saban koji koristi obrise)
 function checkLogs() {
     if (!fs.existsSync(LOGS_FILE)) {
-        fs.writeFileSync(LOGS_FILE, JSON.stringify({ operations: [] }, null, 2));  // If file does not exist, make one (in case dumbass that uses it deletes it)
+        fs.writeFileSync(LOGS_FILE, JSON.stringify({ operations: [] }, null, 2)); 
     }
 }
 
@@ -23,8 +24,7 @@ function addLog(dataToAdd) {
 
     fs.writeFileSync(LOGS_FILE,JSON.stringify(currentData, null, 2)); // write edited current data, to file
 }
-// TO-DO: might implement text based, in terminal reader of logs as option 4? i think
-// curently inactive function
+// TO-DO: might implement text based, in terminal reader of logs as option 4? // 3 month later: nisam ga taknuo
 function getLogs(slicesToReturn=10) {
     checkLogs(); // starting check
     const currentData = JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8'));

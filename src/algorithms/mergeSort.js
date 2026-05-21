@@ -1,6 +1,4 @@
-// Merge sort - podeli pa vladaj, stabilan, O(n log n).
-// Predvidjeno za sortiranje indeksa {hash, word} (vidi ANALIZA.md, tacka 4.2).
-// Za sada nije uvezan nigde - ceka integraciju u indeksirani napad.
+// uuuu sto jak merge sort O(n log n)
 
 export function mergeSort(arr, compare) {
     if (arr.length <= 1) return arr;

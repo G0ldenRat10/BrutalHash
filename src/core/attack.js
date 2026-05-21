@@ -19,7 +19,8 @@ async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm, wor
         const currentWord = wordlist[i].trim();
         if (!currentWord) continue; // to skip empty lines
 
-        // Note: here I put attempts bellow if(!currentWord) continue; -> since that is the code that empty's the lines; BEFOREFIX: ora_loader was at: 20m, FIX: it's now at 20k
+        // Note: here I put attempts bellow if(!currentWord) continue; -> since that is the code that empty's the lines; 
+        // BEFOREFIX: ora_loader was at: 20m, FIX: it's now at 20k
         attempts++;
         const testHash = generateHash(currentWord, hashAlgorithm);
 
@@ -44,7 +45,7 @@ async function dictionaryAttackInMemory(targetHash, wordlist, hashAlgorithm, wor
 
 async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
     // Algorithm:
-    // words if count of them is example:100 -> 1/100 => word -> 1 line -> generateHash(word, alg)... --> until: 100/100 or n(1 - 100) a match
+    // words if count of them is example:100 -> 1/100 => word -> 1 line -> generateHash(word, alg)... --> until: 100/100 or n({1,2,3...100) a match
 
     const startTime = Date.now();  // Start the time capture
     const spinner = ora('Starting stream attack...').start(); // Start the spinner
@@ -98,9 +99,9 @@ async function dictionaryAttackStream(targetHash, filePath, hashAlgorithm) {
 }
 
 async function dictionaryAttack(targetHash, wordListSource, hashAlgorithm, attackMethod, wordlistPath=null) {
-    // my router function to start attack
+    // my router function to start attack , tried to fix it like this
 
-    // Logic to not damage PC in case attackMethod is undefined:
+    // Logic to not damage your PC in case attackMethod is undefined:
     if (attackMethod === undefined) {
         if (typeof wordListSource === 'string') {               // is path, not []
             // Stream attack, resource saving
